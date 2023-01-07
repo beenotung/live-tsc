@@ -1,6 +1,6 @@
 {
   "name": "live-tsc",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A lightweight implementation of tsc that trim off the types (without type checking)",
   "keywords": [
     "typescript",
