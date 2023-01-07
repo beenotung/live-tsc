@@ -88,6 +88,8 @@ async function transpile(sourceCode: string): Promise<string> {
     sourceCode = sourceCode.replace(typeCode, '')
   }
 
+  // TODO type declaration
+
   // variable declaration type with assignment
   matches = sourceCode.matchAll(/(\w+): \w+ =/g)
   for (let match of matches) {
