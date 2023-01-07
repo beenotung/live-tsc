@@ -67,5 +67,55 @@ async function transpileFile(srcPath: string, destPath: string) {
 }
 
 async function transpile(sourceCode: string): Promise<string> {
+  // import type
+  let matches = sourceCode.matchAll(/import type {.*} from '.*'\n/g)
+  for (let match of matches) {
+    let [typeCode] = match
+    sourceCode = sourceCode.replace(typeCode, '')
+  }
+  matches = sourceCode.matchAll(/import type \w+ from '.*'\n/g)
+  for (let match of matches) {
+    let [typeCode] = match
+    sourceCode = sourceCode.replace(typeCode, '')
+  }
+
+  // as type casting
+  matches = sourceCode.matchAll(/ as (\w+)/g)
+  for (let match of matches) {
+    let [typeCode] = match
+    let before = sourceCode[match.index! - 1]
+    if (before == '*') continue
+    sourceCode = sourceCode.replace(typeCode, '')
+  }
+
+  // variable declaration type with assignment
+  matches = sourceCode.matchAll(/(\w+): \w+ =/g)
+  for (let match of matches) {
+    let [typeCode, name] = match
+    sourceCode = sourceCode.replace(typeCode, `${name} =`)
+  }
+
+  // variable declaration type without assignment
+  matches = sourceCode.matchAll(/let (\w+): .*(?!=)\n/g)
+  for (let match of matches) {
+    let [typeCode, name] = match
+    sourceCode = sourceCode.replace(typeCode, `let ${name}\n`)
+  }
+
+  // function argument type
+  matches = sourceCode.matchAll(/\((\w+): ([\w.]+)\)/g)
+  for (let match of matches) {
+    let [typeCode, name, type] = match
+    sourceCode = sourceCode.replace(typeCode, `(${name})`)
+  }
+  // TODO support multiple arguments
+
+  // function return type
+  matches = sourceCode.matchAll(/function (\w+\(.*\)): [\w. |]+{/g)
+  for (let match of matches) {
+    let [typeCode, rest] = match
+    sourceCode = sourceCode.replace(typeCode, `function ${rest} {`)
+  }
+
   return sourceCode
 }
