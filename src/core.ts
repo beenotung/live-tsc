@@ -68,12 +68,12 @@ async function transpileFile(srcPath: string, destPath: string) {
 
 async function transpile(sourceCode: string): Promise<string> {
   // import type
-  let matches = sourceCode.matchAll(/import type {.*} from '.*'\n/g)
+  let matches = sourceCode.matchAll(/import type {(.|\n)*?} from '.*';?\n/g)
   for (let match of matches) {
     let [typeCode] = match
     sourceCode = sourceCode.replace(typeCode, '')
   }
-  matches = sourceCode.matchAll(/import type \w+ from '.*'\n/g)
+  matches = sourceCode.matchAll(/import type \w+ from '.*';?\n/g)
   for (let match of matches) {
     let [typeCode] = match
     sourceCode = sourceCode.replace(typeCode, '')
