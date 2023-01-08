@@ -20,13 +20,13 @@ for (let i = 2; i < args.length; i++) {
   switch (arg) {
     case '--src':
     case '-s':
-      srcPath = args[i + 1]
       i++
+      srcPath = args[i]
       break
     case '--dest':
     case '-d':
-      destPath = args[i + 1]
       i++
+      destPath = args[i]
       break
     case '--help':
     case '-h':
