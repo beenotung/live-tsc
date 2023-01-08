@@ -1,6 +1,6 @@
 # live-tsc
 
-A lightweight implementation of tsc that trim off the types (without type checking)
+A lightweight esbuild-based implementation of tsc that trim off the types (without type checking)
 
 Intended to be used by ts-liveview
 

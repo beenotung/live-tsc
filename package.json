@@ -1,11 +1,12 @@
 {
   "name": "live-tsc",
   "version": "0.0.1",
-  "description": "A lightweight implementation of tsc that trim off the types (without type checking)",
+  "description": "A lightweight esbuild-based implementation of tsc that trim off the types (without type checking)",
   "keywords": [
     "typescript",
     "tsc",
     "transpile",
+    "esbuild",
     "cli",
     "watch",
     "type-checking",
