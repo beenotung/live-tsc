@@ -232,7 +232,7 @@ class TypeParser {
       return
     }
 
-    if (this.match(/^\[\w+(.|\n)*\]/)) {
+    if (this.startsWith('[')) {
       this.takeStaticArray()
       return
     }
@@ -248,7 +248,7 @@ class TypeParser {
     for (;;) {
       if (this.startsWith(']')) break
 
-      this.takeName()
+      this.takeType()
       this.takeWhitespace()
 
       if (this.startsWith('?')) {
