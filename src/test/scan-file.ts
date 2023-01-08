@@ -5,6 +5,7 @@ scanPath({
   srcPath: '../ts-liveview/' + file + '.ts',
   destPath: '../ts-liveview/dist/' + file + '.js',
   watch: false,
+  excludePaths: [],
   config: {
     jsx: 'transform',
     jsxFactory: 'o',

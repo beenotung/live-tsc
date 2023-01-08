@@ -9,6 +9,7 @@ let args = process.argv
 
 let srcPath = ''
 let destPath = ''
+let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
 
@@ -29,6 +30,11 @@ for (let i = 2; i < args.length; i++) {
     case '-d':
       i++
       destPath = args[i]
+      break
+    case '--exclude':
+    case '-e':
+      i++
+      excludePaths.push(args[i])
       break
     case '--project':
     case '-p':
@@ -72,6 +78,7 @@ let scanOptions: ScanOptions = {
   srcPath,
   destPath,
   watch,
+  excludePaths,
   config: {
     jsx: compilerOptions.jsx ? 'transform' : undefined,
     jsxFactory: compilerOptions.jsxFactory,
@@ -102,6 +109,14 @@ ${pkg.name} v${pkg.version}
 Usage:
   ${pkg.name} [options]
 
+Example:
+  npx ${pkg.name} \\
+    --watch \\
+    --project ../ts-liveview/tsconfig.json \\
+    --src ../ts-liveview \\
+    --dest ../ts-liveview/dist \\
+    --exclude ../ts-liveview/scripts
+
 Options:
 
   --src <dir|file>
@@ -111,6 +126,12 @@ Options:
   --dest <dir|file>
     Specify the destination directory/file
     Alias: -d
+
+  --exclude <dir|file>
+    Specify the path to be excluded;
+    Can be specified multiple times;
+    The destination directory is excluded by default
+    Alias: -e
 
   --project <file>
     Specify the path of tsconfig file

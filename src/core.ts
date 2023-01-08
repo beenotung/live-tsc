@@ -31,6 +31,7 @@ export interface ScanOptions {
   srcPath: string
   destPath: string
   watch: boolean
+  excludePaths: string[]
   config: {
     jsx?: 'transform' | 'preserve' | 'automatic'
     jsxFactory?: string
@@ -39,6 +40,9 @@ export interface ScanOptions {
 }
 
 export async function scanPath(options: ScanOptions) {
+  if (!options.excludePaths.includes(options.destPath)) {
+    options.excludePaths.push(options.destPath)
+  }
   let stat = await fs.stat(options.srcPath)
   if (stat.isFile()) {
     return scanFile(options)
@@ -52,7 +56,10 @@ async function scanDirectory(
   options: ScanOptions,
   parentWatchers: Record<string, FSWatcher>,
 ) {
-  const { srcPath: srcDir, destPath: destDir, config } = options
+  const { srcPath: srcDir, destPath: destDir } = options
+
+  if (options.excludePaths.includes(srcDir)) return
+
   const childWatchers: Record<string, FSWatcher> = {}
 
   await fs.mkdir(destDir, { recursive: true })
@@ -63,9 +70,10 @@ async function scanDirectory(
 
   async function processFile(file: string) {
     if (skipFilenames.includes(file)) return
-    const extname = path.extname(file)
 
     const srcPath = path.join(srcDir, file)
+    if (options.excludePaths.includes(srcPath)) return
+
     let destPath = path.join(destDir, file)
 
     const stat = await fs.stat(srcPath)
@@ -77,7 +85,8 @@ async function scanDirectory(
           srcPath: srcPath,
           destPath: destPath,
           watch: options.watch,
-          config,
+          config: options.config,
+          excludePaths: options.excludePaths,
         },
         childWatchers,
       )
@@ -89,6 +98,7 @@ async function scanDirectory(
       return
     }
 
+    const extname = path.extname(file)
     if (extname == '.ts') {
       destPath = destPath.replace(/ts$/, 'js')
     } else if (extname == '.tsx') {
@@ -100,12 +110,22 @@ async function scanDirectory(
       return
     } else {
       if (!skipExtnames.includes(extname)) {
-        console.debug('[skip]', srcPath, '(not supported extname)')
+        console.debug(
+          '[skip]',
+          srcPath,
+          `(not supported extname ${JSON.stringify(extname)})`,
+        )
       }
       return
     }
 
-    await scanFile({ srcPath, destPath, watch: options.watch, config })
+    await scanFile({
+      srcPath,
+      destPath,
+      watch: options.watch,
+      config: options.config,
+      excludePaths: options.excludePaths,
+    })
   }
 
   if (options.watch) {
@@ -116,6 +136,9 @@ async function scanDirectory(
         if (event != 'rename') return
 
         const file = path.join(srcDir, filename)
+
+        if (options.excludePaths.includes(file)) return
+
         const fileIdx = files.indexOf(filename)
         if (fileIdx != -1) {
           // the file is removed

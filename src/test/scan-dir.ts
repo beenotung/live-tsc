@@ -6,6 +6,7 @@ async function main() {
       srcPath: '../ts-liveview/' + dir,
       destPath: '../ts-liveview/dist/' + dir,
       watch: false,
+      excludePaths: [],
       config: {
         jsx: 'transform',
         jsxFactory: 'o',
