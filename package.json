@@ -32,6 +32,9 @@
     "test": "tsc --noEmit",
     "build": "tsc -p ."
   },
+  "dependencies": {
+    "esbuild": "^0.16.9"
+  },
   "devDependencies": {
     "@types/node": "^18.11.17",
     "ts-node": "^10.9.1",

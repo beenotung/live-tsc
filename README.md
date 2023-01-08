@@ -28,6 +28,10 @@ Options:
     Specify the destination directory
     Alias: -d
 
+  --project <file>
+    Specify the path of tsconfig file
+    Alias: -p
+
   --watch
     Watch for changes and rerun
     Alias: -w
