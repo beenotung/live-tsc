@@ -68,7 +68,13 @@ async function scanFile(options: ScanOptions) {
 
 async function transpileFile(srcPath: string, destPath: string) {
   const sourceCode = (await fs.readFile(srcPath)).toString()
-  const transpiledCode = await transpile(sourceCode)
+  let transpiledCode: string
+  try {
+    transpiledCode = await transpile(sourceCode)
+  } catch (error) {
+    console.error('failed to transpile file:', srcPath)
+    throw error
+  }
 
   try {
     const destCode = (await fs.readFile(destPath)).toString()
