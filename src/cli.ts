@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { scanDirectory } from './core'
+import { scanPath } from './core'
 
 let pkg = require('../package.json')
 
 let args = process.argv
 
-let srcDir = ''
-let destDir = ''
+let srcPath = ''
+let destPath = ''
 let watch = false
 
 if (args.length <= 2) {
@@ -18,14 +18,14 @@ if (args.length <= 2) {
 for (let i = 2; i < args.length; i++) {
   let arg = args[i]
   switch (arg) {
-    case '--src-dir':
+    case '--src':
     case '-s':
-      srcDir = args[i + 1]
+      srcPath = args[i + 1]
       i++
       break
-    case '-dest-dir':
+    case '--dest':
     case '-d':
-      destDir = args[i + 1]
+      destPath = args[i + 1]
       i++
       break
     case '--help':
@@ -42,17 +42,17 @@ for (let i = 2; i < args.length; i++) {
   }
 }
 
-if (!srcDir) {
-  console.error('No --src-dir specified')
+if (!srcPath) {
+  console.error('No --src specified')
   process.exit(1)
 }
 
-if (!destDir) {
-  console.error('No --dest-dir specified')
+if (!destPath) {
+  console.error('No --dest specified')
   process.exit(1)
 }
 
-scanDirectory({ srcDir, destDir, watch })
+scanPath({ srcPath, destPath, watch })
   .then(() => {
     console.log('completed scanning')
   })
@@ -71,12 +71,12 @@ Usage:
 
 Options:
 
-  --src-dir <dir>
-    Specify the source directory
+  --src <dir|file>
+    Specify the source directory/file
     Alias: -s
 
-  --dest-dir <dir>
-    Specify the destination directory
+  --dest <dir|file>
+    Specify the destination directory/file
     Alias: -d
 
   --watch

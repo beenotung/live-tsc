@@ -3,13 +3,23 @@ import fs from 'fs/promises'
 import path from 'path'
 
 export interface ScanOptions {
-  srcDir: string
-  destDir: string
+  srcPath: string
+  destPath: string
   watch: boolean
 }
 
-export async function scanDirectory(options: ScanOptions) {
-  const { srcDir, destDir, watch } = options
+export async function scanPath(options: ScanOptions) {
+  let stat = await fs.stat(options.srcPath)
+  if (stat.isFile()) {
+    return scanFile(options)
+  }
+  if (stat.isDirectory()) {
+    return scanDirectory(options)
+  }
+}
+
+async function scanDirectory(options: ScanOptions) {
+  const { srcPath: srcDir, destPath: destDir, watch } = options
 
   const files = await fs.readdir(srcDir)
 
@@ -26,8 +36,8 @@ export async function scanDirectory(options: ScanOptions) {
     if (stat.isDirectory()) {
       await fs.mkdir(destPath, { recursive: true })
       await scanDirectory({
-        srcDir: srcPath,
-        destDir: destPath,
+        srcPath: srcPath,
+        destPath: destPath,
         watch,
       })
       return
@@ -47,8 +57,13 @@ export async function scanDirectory(options: ScanOptions) {
       return
     }
 
-    await transpileFile(srcPath, destPath)
+    await scanFile({ srcPath, destPath, watch })
   }
+}
+
+async function scanFile(options: ScanOptions) {
+  let { srcPath, destPath } = options
+  await transpileFile(srcPath, destPath)
 }
 
 async function transpileFile(srcPath: string, destPath: string) {
