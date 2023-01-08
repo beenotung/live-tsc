@@ -5,6 +5,7 @@ import esbuild from 'esbuild'
 
 let skipFilenames = [
   'node_modules',
+  '.git',
   '.env',
   '.gitignore',
   'package.json',
@@ -12,20 +13,41 @@ let skipFilenames = [
   'yarn.lock',
   'pnpm-lock.yaml',
   'tsconfig.json',
+  'LICENSE',
+  'config',
+  '.dccache',
+  '.last',
+  '.prettierrc',
+  '.prettierignore',
+  '.eslintignore',
+  '.eslintrc.json',
+  'nodemon.json',
 ]
 
 let skipExtnames = [
   '.env',
   '.md',
   '.txt',
+  '.sh',
   '.yaml',
   '.lock',
+  '.gz',
+  '.pem',
+  '.ico',
   '.sqlite3',
   '.sqlite3-shm',
   '.sqlite3-wal',
+  '.example',
+  '.html',
+  '.css',
+  '.mp4',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.svg',
 ]
 
-let copyExtnames = ['.js', '.html', '.css']
+let copyExtnames = ['.js']
 
 export interface ScanOptions {
   srcPath: string
