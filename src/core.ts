@@ -228,7 +228,12 @@ class TypeParser {
 
     // bracket
     if (this.startsWith('(')) {
-      this.takeBracket()
+      this.takeCurlyBracket()
+      return
+    }
+
+    if (this.match(/^\[\w+(.|\n)*\]/)) {
+      this.takeStaticArray()
       return
     }
 
@@ -236,7 +241,36 @@ class TypeParser {
     this.takeName()
     this.takeGenericType()
   }
-  private takeBracket() {
+  private takeStaticArray() {
+    this.take('[')
+    this.takeWhitespace()
+
+    for (;;) {
+      if (this.startsWith(']')) break
+
+      this.takeName()
+      this.takeWhitespace()
+
+      if (this.startsWith('?')) {
+        this.take('?')
+        this.takeWhitespace()
+      }
+
+      if (this.startsWith(':')) {
+        this.take(':')
+        this.takeWhitespace()
+        this.takeType()
+        this.takeWhitespace()
+      }
+
+      if (this.startsWith(',')) {
+        this.take(',')
+        this.takeWhitespace()
+      }
+    }
+    this.take(']')
+  }
+  private takeCurlyBracket() {
     // open bracket
     this.take('(')
     this.takeWhitespace()
@@ -297,7 +331,7 @@ class TypeParser {
 
       // method parameter
       if (this.startsWith('(')) {
-        this.takeBracket()
+        this.takeCurlyBracket()
       }
 
       // optional flag
