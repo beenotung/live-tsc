@@ -22,7 +22,7 @@
     "url": "https://github.com/beenotung/live-tsc/issues"
   },
   "bin": {
-    "live-tsc": "./dist/cli.js"
+    "live-tsc": "dist/cli.js"
   },
   "files": [
     "dist/core.js",
