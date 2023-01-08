@@ -242,20 +242,24 @@ class TypeParser {
     this.takeGenericType()
   }
   private takeStaticArray() {
+    // open bracket
     this.take('[')
     this.takeWhitespace()
 
     for (;;) {
       if (this.startsWith(']')) break
 
+      // type or name
       this.takeType()
       this.takeWhitespace()
 
+      // optional flag
       if (this.startsWith('?')) {
         this.take('?')
         this.takeWhitespace()
       }
 
+      // colon and type
       if (this.startsWith(':')) {
         this.take(':')
         this.takeWhitespace()
@@ -263,11 +267,14 @@ class TypeParser {
         this.takeWhitespace()
       }
 
+      // comma and next pair
       if (this.startsWith(',')) {
         this.take(',')
         this.takeWhitespace()
       }
     }
+
+    // close bracket
     this.take(']')
   }
   private takeCurlyBracket() {
