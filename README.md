@@ -14,19 +14,34 @@ npm i -D live-tsc
 
 ## Command Line Usage
 
+Usage Example:
+
+```bash
+npx live-tsc \
+  --watch \
+  --project ../ts-liveview/tsconfig.json \
+  --src     ../ts-liveview \
+  --dest    ../ts-liveview/dist \
+  --exclude ../ts-liveview/scripts \
+  --exclude ../ts-liveview/public
 ```
-Usage:
-  live-tsc [options]
 
 Options:
 
-  --src-dir <dir>
-    Specify the source directory
+```
+  --src <dir|file>
+    Specify the source directory/file
     Alias: -s
 
-  --dest-dir <dir>
-    Specify the destination directory
+  --dest <dir|file>
+    Specify the destination directory/file
     Alias: -d
+
+  --exclude <dir|file>
+    Specify the path to be excluded;
+    Can be specified multiple times;
+    The destination directory is excluded by default
+    Alias: -e
 
   --project <file>
     Specify the path of tsconfig file
@@ -37,7 +52,7 @@ Options:
     Alias: -w
 
   --help
-    Show this message
+    Show help message
     Alias: -h
 ```
 

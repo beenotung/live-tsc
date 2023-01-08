@@ -142,7 +142,7 @@ Options:
     Alias: -w
 
   --help
-    Show this message
+    Show help message
     Alias: -h
 `.trim(),
   )
