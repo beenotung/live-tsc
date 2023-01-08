@@ -96,14 +96,9 @@ async function scanFile(options: ScanOptions) {
 }
 
 async function transpileFile(srcPath: string, destPath: string) {
+  // console.debug('transpileFile:', srcPath)
   const sourceCode = (await fs.readFile(srcPath)).toString()
-  let transpiledCode: string
-  try {
-    transpiledCode = await transpile(sourceCode)
-  } catch (error) {
-    console.error('failed to transpile file:', srcPath)
-    throw error
-  }
+  let transpiledCode = transpile(sourceCode, srcPath)
 
   try {
     const destCode = (await fs.readFile(destPath)).toString()
@@ -117,7 +112,14 @@ async function transpileFile(srcPath: string, destPath: string) {
   await fs.writeFile(destPath, transpiledCode)
 }
 
-async function transpile(sourceCode: string): Promise<string> {
+// FIXME avoid messing with keywords in string value / jsx text
+function transpile(sourceCode: string, file: string): string {
+  let pendingRestores: [origin: string, placeholder: string][] = []
+  function tmpReplace(origin: string, placeholder: string) {
+    sourceCode = sourceCode.replace(origin, placeholder)
+    pendingRestores.push([origin, placeholder])
+  }
+
   // import type
   let matches = sourceCode.matchAll(/import type {(.|\n)*?} from '.*';?\n/g)
   for (let match of matches) {
@@ -130,27 +132,51 @@ async function transpile(sourceCode: string): Promise<string> {
     sourceCode = sourceCode.replace(typeCode, '')
   }
 
-  // as type casting
-  matches = sourceCode.matchAll(/ as ([\w.]+)/g)
+  // import as alias
+  matches = sourceCode.matchAll(
+    /import[\s\n]+{[\w\s\n]+?as[\w\s\n]+?}[\s\n]+from[\s\n]+/g,
+  )
   for (let match of matches) {
-    let [typeCode] = match
-    let before = sourceCode[match.index! - 1]
-    if (before == '*') continue
-    sourceCode = sourceCode.replace(typeCode, '')
+    let origin = match[0]
+    tmpReplace(origin, origin.replace(/ as /g, ' AS '))
+  }
+  matches = sourceCode.matchAll(/import \* as \w+ from/g)
+  for (let match of matches) {
+    let origin = match[0]
+    tmpReplace(origin, origin.replace(/ as /g, ' AS '))
   }
 
-  // variable declaration type with assignment
-  matches = sourceCode.matchAll(/(\w+): [\w.]+ =/g)
-  for (let match of matches) {
-    let [typeCode, name] = match
-    sourceCode = sourceCode.replace(typeCode, `${name} =`)
-  }
+  for (;;) {
+    // as type casting
+    let match = sourceCode.match(/ as (?!<)(.|\n)+/)
+    if (match) {
+      let [typeCode] = match
+      let rest = typeCode.slice(' as '.length)
+      let type = parseType(rest, file)
+      typeCode = ' as ' + type
+      sourceCode = sourceCode.replace(typeCode, '')
+      continue
+    }
 
-  // variable declaration type without assignment
-  matches = sourceCode.matchAll(/let (\w+): .*(?!=)\n/g)
-  for (let match of matches) {
-    let [typeCode, name] = match
-    sourceCode = sourceCode.replace(typeCode, `let ${name}\n`)
+    // variable declaration type with/without assignment
+    match = sourceCode.match(/(let|const)([\s|\n]+\w+[\s|\n]*):(.|\n)*/)
+    for (let match of matches) {
+      let [typeCode, declare, name, rest] = match
+      console.log({ declare, name, rest, match_0: match[0] })
+      let type = parseType(rest, file)
+      console.log({
+        typeCode,
+        declare,
+        name,
+        type,
+        rest,
+      })
+      process.exit(0)
+      sourceCode = sourceCode.replace(typeCode, `${declare}${name}`)
+      continue
+    }
+
+    break
   }
 
   // function argument type
@@ -169,35 +195,37 @@ async function transpile(sourceCode: string): Promise<string> {
   }
 
   for (;;) {
+    // export type
     let match = sourceCode.match(/export type (\w+) =/)
     if (!match) break
     let [typeCode, name] = match
     let idx = match.index! + typeCode.length
     let rest = sourceCode.slice(idx)
-    let type = parseType(rest)
+    let type = parseType(rest, file)
     // console.debug('type declaration:', { name, type })
     typeCode += type
     sourceCode = sourceCode.replace(typeCode, '')
+
+    // define type (not exported)
+  }
+
+  for (let [origin, placeholder] of pendingRestores) {
+    // console.log('restore:', { origin, placeholder })
+    sourceCode = sourceCode.replace(placeholder, origin)
   }
 
   return sourceCode
 }
 
-function parseType(code: string): string {
-  try {
-    return new TypeParser(code).type
-  } catch (error) {
-    console.error('failed to parse type, sample:')
-    console.error('v'.repeat(32))
-    console.error(code.slice(0, 200))
-    console.error('^'.repeat(32))
-    throw error
-  }
+function parseType(code: string, file: string): string {
+  return new TypeParser(code, file).type
 }
 
 class TypeParser {
   type = ''
-  constructor(private code: string) {
+  rest: string
+  constructor(private code: string, private file: string) {
+    this.rest = code
     this.takeType()
   }
   private takeType() {
@@ -219,10 +247,10 @@ class TypeParser {
     }
   }
   private match(regex: RegExp) {
-    return this.code.match(regex)
+    return this.rest.match(regex)
   }
   private startsWith(part: string) {
-    return this.code.startsWith(part)
+    return this.rest.startsWith(part)
   }
   private takeOneType() {
     this.takeOneTypeNotArray()
@@ -426,14 +454,14 @@ class TypeParser {
   private takeString(quote: string) {
     this.take(quote)
     quote = quote.trim()
-    for (; this.code.length > 0; ) {
-      let char = this.code[0]
+    for (; this.rest.length > 0; ) {
+      let char = this.rest[0]
       if (char == quote) {
         this.take(char)
         return
       }
       if (char == '\\') {
-        this.take(this.code.slice(0, 2))
+        this.take(this.rest.slice(0, 2))
       } else {
         this.take(char)
       }
@@ -493,13 +521,11 @@ class TypeParser {
     this.take(match[0])
   }
   private parseError(name: string) {
-    let acc = JSON.stringify(this.type)
-    let rest = JSON.stringify(this.code.slice(0, 10))
-    return new Error(`Failed to parse ${name}, acc: ${acc}, rest: ${rest} ...`)
+    return new ParseError(this, name)
   }
   private take(part: string) {
-    if (!this.code.startsWith(part)) {
-      let sample = this.code.slice(0, part.length)
+    if (!this.rest.startsWith(part)) {
+      let sample = this.rest.slice(0, part.length)
       console.error({})
       throw new AssertionError({
         expected: 'starts with ' + JSON.stringify(part),
@@ -509,6 +535,12 @@ class TypeParser {
       })
     }
     this.type += part
-    this.code = this.code.slice(part.length)
+    this.rest = this.rest.slice(part.length)
+  }
+}
+
+class ParseError extends Error {
+  constructor(public parser: TypeParser, public parsingPart: string) {
+    super()
   }
 }
