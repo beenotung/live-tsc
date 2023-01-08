@@ -1,3 +1,4 @@
+import { FSWatcher, watch } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 import esbuild from 'esbuild'
@@ -43,12 +44,16 @@ export async function scanPath(options: ScanOptions) {
     return scanFile(options)
   }
   if (stat.isDirectory()) {
-    return scanDirectory(options)
+    return scanDirectory(options, {})
   }
 }
 
-async function scanDirectory(options: ScanOptions) {
-  const { srcPath: srcDir, destPath: destDir, watch, config } = options
+async function scanDirectory(
+  options: ScanOptions,
+  parentWatchers: Record<string, FSWatcher>,
+) {
+  const { srcPath: srcDir, destPath: destDir, config } = options
+  const childWatchers: Record<string, FSWatcher> = {}
 
   await fs.mkdir(destDir, { recursive: true })
 
@@ -67,12 +72,15 @@ async function scanDirectory(options: ScanOptions) {
 
     if (stat.isDirectory()) {
       await fs.mkdir(destPath, { recursive: true })
-      await scanDirectory({
-        srcPath: srcPath,
-        destPath: destPath,
-        watch,
-        config,
-      })
+      await scanDirectory(
+        {
+          srcPath: srcPath,
+          destPath: destPath,
+          watch: options.watch,
+          config,
+        },
+        childWatchers,
+      )
       return
     }
 
@@ -97,23 +105,52 @@ async function scanDirectory(options: ScanOptions) {
       return
     }
 
-    await scanFile({ srcPath, destPath, watch, config })
+    await scanFile({ srcPath, destPath, watch: options.watch, config })
+  }
+
+  if (options.watch) {
+    const watcher = watch(
+      srcDir,
+      { persistent: true, recursive: false },
+      (event, filename) => {
+        if (event != 'rename') return
+
+        const file = path.join(srcDir, filename)
+        const fileIdx = files.indexOf(filename)
+        if (fileIdx != -1) {
+          // the file is removed
+          console.info('removed file:', file)
+          files.splice(fileIdx, 1)
+          const childWatcher = childWatchers[filename]
+          if (childWatcher) {
+            childWatcher.close()
+            delete childWatchers[filename]
+          }
+        } else {
+          // the file is newly created
+          console.info('new file:', file)
+          files.push(filename)
+          processFile(filename)
+        }
+      },
+    )
+    const selfFilename = path.basename(srcDir)
+    parentWatchers[selfFilename] = watcher
   }
 }
 
 async function scanFile(options: ScanOptions) {
   let { srcPath, destPath } = options
-  await transpileFile(srcPath, destPath, options.config)
+  await transpileFile(srcPath, destPath, options)
 }
 
 async function transpileFile(
   srcPath: string,
   destPath: string,
-  config: ScanOptions['config'],
+  options: ScanOptions,
 ) {
-  // console.debug('transpileFile:', srcPath)
-  const sourceCode = (await fs.readFile(srcPath)).toString()
-  let transpiledCode = await transpile(sourceCode, srcPath, config)
+  let sourceCode = (await fs.readFile(srcPath)).toString()
+  let transpiledCode = await transpile(sourceCode, srcPath, options.config)
 
   try {
     const destCode = (await fs.readFile(destPath)).toString()
@@ -125,6 +162,37 @@ async function transpileFile(
   }
 
   await fs.writeFile(destPath, transpiledCode)
+
+  if (options.watch) {
+    const watcher = watch(srcPath, { persistent: true }, async event => {
+      if (event == 'rename') {
+        watcher.close()
+        return
+      }
+
+      if (event != 'change') return
+
+      let newSourceCode = (await fs.readFile(srcPath)).toString()
+      if (newSourceCode == sourceCode) return
+      sourceCode = newSourceCode
+
+      let startTime = Date.now()
+      let newTranspiledCode = await transpile(
+        newSourceCode,
+        srcPath,
+        options.config,
+      )
+      if (newTranspiledCode == transpiledCode) return
+      transpiledCode = newTranspiledCode
+
+      await fs.writeFile(destPath, newTranspiledCode)
+
+      let endTime = Date.now()
+
+      let usedTime = endTime - startTime
+      console.info('updated file:', srcPath, 'in', usedTime, 'ms')
+    })
+  }
 }
 
 async function transpile(

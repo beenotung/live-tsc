@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
-import { scanPath } from './core'
+import { ScanOptions, scanPath } from './core'
 
 let pkg = require('../package.json')
 
@@ -67,7 +67,7 @@ if (!tsconfigFile) {
 let compilerOptions =
   JSON.parse(fs.readFileSync(tsconfigFile).toString()).compilerOptions || {}
 
-scanPath({
+let scanOptions: ScanOptions = {
   srcPath,
   destPath,
   watch,
@@ -76,9 +76,17 @@ scanPath({
     jsxFactory: compilerOptions.jsxFactory,
     jsxFragment: compilerOptions.jsxFragmentFactory,
   },
-})
+}
+
+let startTime = Date.now()
+scanPath(scanOptions)
   .then(() => {
-    console.log('completed scanning')
+    let endTime = Date.now()
+    let usedTime = endTime - startTime
+    console.info('completed scanning in', usedTime, 'ms')
+    if (watch) {
+      console.info('watching for changes...')
+    }
   })
   .catch(err => {
     console.error(err)
