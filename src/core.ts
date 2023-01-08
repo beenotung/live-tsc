@@ -147,7 +147,7 @@ async function transpile(sourceCode: string): Promise<string> {
     let idx = match.index! + typeCode.length
     let rest = sourceCode.slice(idx)
     let type = parseType(rest)
-    console.log({ name, type })
+    console.debug('type declaration:', { name, type })
     typeCode += type
     sourceCode = sourceCode.replace(typeCode, '')
   }
@@ -179,20 +179,22 @@ class TypeParser {
     let match = this.match(/^[|&]/)
     if (match) {
       this.take(match[0])
-      this.takeOneType()
-      for (;;) {
-        let match = this.match(/^[\s|\n]*[|&]/)
-        if (!match) break
-        this.take(match[0])
-        this.takeOneType()
-      }
-      return
+      this.takeWhitespace()
     }
 
     this.takeOneType()
+    for (;;) {
+      let match = this.match(/^[\s|\n]*[|&][\s|\n]*/)
+      if (!match) break
+      this.take(match[0])
+      this.takeOneType()
+    }
   }
   private match(regex: RegExp) {
     return this.code.match(regex)
+  }
+  private startsWith(part: string) {
+    return this.code.startsWith(part)
   }
   private takeOneType() {
     this.takeOneTypeNotArray()
@@ -218,15 +220,62 @@ class TypeParser {
     }
     // TODO support template string
 
-    match = this.match(/^{/)
-    if (match) {
+    // object
+    if (this.startsWith('{')) {
       this.takeObject()
+      return
+    }
+
+    // bracket
+    if (this.startsWith('(')) {
+      this.takeBracket()
       return
     }
 
     // named type
     this.takeName()
     this.takeGenericType()
+  }
+  private takeBracket() {
+    // open bracket
+    this.take('(')
+    this.takeWhitespace()
+
+    for (;;) {
+      // close bracket
+      if (this.startsWith(')')) break
+
+      // name or type
+      this.takeType()
+      this.takeWhitespace()
+
+      // optional flag
+      let match = this.match(/^\?[\s|\n]*/)
+      if (match) {
+        this.take(match[0])
+      }
+
+      // colon and type
+      match = this.match(/^:[\s|\n]*/)
+      if (match) {
+        this.take(match[0])
+        this.takeType()
+        this.takeWhitespace()
+      }
+
+      // comma and next pair
+      match = this.match(/^,[\s|\n]*/)
+      if (match) {
+        this.take(match[0])
+      }
+    }
+    this.take(')')
+
+    let match = this.match(/^[\s|\n]*=>[\s|\n]*/)
+    if (match) {
+      this.take(match[0])
+      this.takeType()
+    }
   }
   private takeObject() {
     // open bracket
@@ -236,17 +285,23 @@ class TypeParser {
       this.takeWhitespace()
 
       // close bracket
-      let match = this.match(/^}/)
-      if (match) {
-        this.take(match[0])
+      if (this.startsWith('}')) {
+        this.take('}')
         return
       }
 
       // key
       this.takeObjectKey()
 
+      this.takeWhitespace()
+
+      // method parameter
+      if (this.startsWith('(')) {
+        this.takeBracket()
+      }
+
       // optional flag
-      match = this.match(/^\?/)
+      let match = this.match(/^\?[\s|\n]*/)
       if (match) {
         this.take(match[0])
       }
@@ -267,8 +322,7 @@ class TypeParser {
     }
 
     // square bracket, e.g. [key: string]
-    match = this.match(/^\[/)
-    if (match) {
+    if (this.startsWith('[')) {
       this.takeObjectKeySquareBracket()
       return
     }
@@ -370,15 +424,19 @@ class TypeParser {
     this.take(match[0])
   }
   private parseError(name: string) {
-    let sample = this.code.slice(0, 10)
-    return new Error(`Failed to parse ${name}: ${JSON.stringify(sample)} ...`)
+    let acc = JSON.stringify(this.type)
+    let rest = JSON.stringify(this.code.slice(0, 10))
+    return new Error(`Failed to parse ${name}, acc: ${acc}, rest: ${rest} ...`)
   }
   private take(part: string) {
     if (!this.code.startsWith(part)) {
       let sample = this.code.slice(0, part.length)
+      console.error({})
       throw new AssertionError({
         expected: 'starts with ' + JSON.stringify(part),
         actual: 'starts with ' + JSON.stringify(sample),
+        message: 'failed to take given part',
+        operator: 'take(part)',
       })
     }
     this.type += part
