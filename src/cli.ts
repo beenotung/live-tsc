@@ -9,8 +9,8 @@ let args = process.argv
 
 let srcPath = ''
 let destPath = ''
-let watch = false
 let tsconfigFile = 'tsconfig.json'
+let watch = false
 
 if (args.length <= 2) {
   showHelp()
@@ -20,11 +20,6 @@ if (args.length <= 2) {
 for (let i = 2; i < args.length; i++) {
   let arg = args[i]
   switch (arg) {
-    case '--project':
-    case '-p':
-      i++
-      tsconfigFile = args[i]
-      break
     case '--src':
     case '-s':
       i++
@@ -35,14 +30,20 @@ for (let i = 2; i < args.length; i++) {
       i++
       destPath = args[i]
       break
-    case '--help':
-    case '-h':
-      showHelp()
-      process.exit(0)
+    case '--project':
+    case '-p':
+      i++
+      tsconfigFile = args[i]
+      break
     case '--watch':
     case '-w':
       watch = true
       break
+    case '--help':
+    case '-h':
+      showHelp()
+      process.exit(0)
+
     default:
       console.error('Unknown argument: ' + JSON.stringify(arg))
       process.exit(1)
