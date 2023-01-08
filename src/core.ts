@@ -2,6 +2,27 @@ import { AssertionError } from 'assert'
 import fs from 'fs/promises'
 import path from 'path'
 
+let skipFilenames = [
+  'node_modules',
+  '.env',
+  '.gitignore',
+  'package.json',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+]
+
+let skipExtnames = [
+  '.env',
+  '.md',
+  '.txt',
+  '.yaml',
+  '.lock',
+  '.sqlite3',
+  '.sqlite3-shm',
+  '.sqlite3-wal',
+]
+
 export interface ScanOptions {
   srcPath: string
   destPath: string
@@ -26,6 +47,7 @@ async function scanDirectory(options: ScanOptions) {
   await Promise.all(files.map(processFile))
 
   async function processFile(file: string) {
+    if (skipFilenames.includes(file)) return
     const extname = path.extname(file)
 
     const srcPath = path.join(srcDir, file)
@@ -52,8 +74,15 @@ async function scanDirectory(options: ScanOptions) {
       destPath = destPath.replace(/ts$/, 'js')
     } else if (extname == '.tsx') {
       destPath = destPath.replace(/tsx$/, 'js')
-    } else {
+    } else if (extname == '.jsx') {
+      destPath = destPath.replace(/jsx$/, 'js')
+    } else if (extname == '.js' || extname == '.json') {
       await fs.copyFile(srcPath, destPath)
+      return
+    } else {
+      if (!skipExtnames.includes(extname)) {
+        console.debug('[skip]', srcPath, '(not supported extname)')
+      }
       return
     }
 
@@ -139,7 +168,6 @@ async function transpile(sourceCode: string): Promise<string> {
     sourceCode = sourceCode.replace(typeCode, `function ${rest} {`)
   }
 
-  // TODO type declaration
   for (;;) {
     let match = sourceCode.match(/export type (\w+) =/)
     if (!match) break
@@ -147,7 +175,7 @@ async function transpile(sourceCode: string): Promise<string> {
     let idx = match.index! + typeCode.length
     let rest = sourceCode.slice(idx)
     let type = parseType(rest)
-    console.debug('type declaration:', { name, type })
+    // console.debug('type declaration:', { name, type })
     typeCode += type
     sourceCode = sourceCode.replace(typeCode, '')
   }
