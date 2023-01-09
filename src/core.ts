@@ -6,6 +6,7 @@ import child_process from 'child_process'
 
 let skipFilenames = [
   'node_modules',
+  '.idea',
   '.git',
   '.env',
   '.gitignore',
