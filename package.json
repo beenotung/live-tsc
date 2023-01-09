@@ -9,6 +9,8 @@
     "esbuild",
     "cli",
     "watch",
+    "watcher",
+    "skip-typechecking",
     "type-checking",
     "lightweight"
   ],
