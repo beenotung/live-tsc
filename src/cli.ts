@@ -12,6 +12,7 @@ let destPath = ''
 let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
+let postHooks: string[] = []
 
 if (args.length <= 2) {
   showHelp()
@@ -50,6 +51,9 @@ for (let i = 2; i < args.length; i++) {
     case '-w':
       watch = true
       break
+    case '--post-hook':
+      postHooks.push(takeNext())
+      break
     case '--help':
     case '-h':
       showHelp()
@@ -84,6 +88,7 @@ let scanOptions: ScanOptions = {
   destPath,
   watch,
   excludePaths,
+  postHooks,
   config: {
     jsx: compilerOptions.jsx ? 'transform' : undefined,
     jsxFactory: compilerOptions.jsxFactory,
@@ -91,20 +96,10 @@ let scanOptions: ScanOptions = {
   },
 }
 
-let startTime = Date.now()
-scanPath(scanOptions)
-  .then(() => {
-    let endTime = Date.now()
-    let usedTime = endTime - startTime
-    console.info('completed scanning in', usedTime, 'ms')
-    if (watch) {
-      console.info('watching for changes...')
-    }
-  })
-  .catch(err => {
-    console.error(err)
-    process.exit(1)
-  })
+scanPath(scanOptions).catch(err => {
+  console.error(err)
+  process.exit(1)
+})
 
 function showHelp() {
   console.log(
@@ -118,9 +113,11 @@ Example:
   npx ${pkg.name} \\
     --watch \\
     --project ../ts-liveview/tsconfig.json \\
-    --src ../ts-liveview \\
-    --dest ../ts-liveview/dist \\
-    --exclude ../ts-liveview/scripts
+    --src     ../ts-liveview \\
+    --dest    ../ts-liveview/dist \\
+    --exclude ../ts-liveview/scripts \\
+    --exclude ../ts-liveview/public \\
+    --post-hook "npx fix-esm-import-path ../ts-liveview/dist/db/proxy.js"
 
 Options:
 
@@ -145,6 +142,10 @@ Options:
   --watch
     Watch for changes and rerun
     Alias: -w
+
+  --post-hook <command>
+    Add command to run after initial scan and subsequence updates;
+    Can be specified multiple times;
 
   --help
     Show help message

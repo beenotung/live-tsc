@@ -23,7 +23,8 @@ npx live-tsc \
   --src     ../ts-liveview \
   --dest    ../ts-liveview/dist \
   --exclude ../ts-liveview/scripts \
-  --exclude ../ts-liveview/public
+  --exclude ../ts-liveview/public \
+  --post-hook "npx fix-esm-import-path ../ts-liveview/dist/db/proxy.js"
 ```
 
 Options:
@@ -50,6 +51,10 @@ Options:
   --watch
     Watch for changes and rerun
     Alias: -w
+
+  --post-hook <command>
+    Add command to run after initial scan and subsequence updates;
+    Can be specified multiple times;
 
   --help
     Show help message

@@ -2,6 +2,7 @@ import { FSWatcher, watch } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 import esbuild from 'esbuild'
+import child_process from 'child_process'
 
 let skipFilenames = [
   'node_modules',
@@ -54,6 +55,7 @@ export interface ScanOptions {
   destPath: string
   watch: boolean
   excludePaths: string[]
+  postHooks: string[]
   config: {
     jsx?: 'transform' | 'preserve' | 'automatic'
     jsxFactory?: string
@@ -62,15 +64,51 @@ export interface ScanOptions {
 }
 
 export async function scanPath(options: ScanOptions) {
+  let startTime = Date.now()
+
   if (!options.excludePaths.includes(options.destPath)) {
     options.excludePaths.push(options.destPath)
   }
   let stat = await fs.stat(options.srcPath)
   if (stat.isFile()) {
-    return scanFile(options)
+    await scanFile(options)
+  } else if (stat.isDirectory()) {
+    await scanDirectory(options, {})
   }
-  if (stat.isDirectory()) {
-    return scanDirectory(options, {})
+
+  let endTime = Date.now()
+  let usedTime = endTime - startTime
+  console.info('completed scanning in', usedTime, 'ms')
+
+  await runHooks(options)
+
+  if (options.watch) {
+    console.info('watching for changes...')
+  }
+}
+
+async function runHooks(options: ScanOptions) {
+  for (let cmd of options.postHooks) {
+    console.info('running postHook', JSON.stringify(cmd))
+    await new Promise<void>((resolve, reject) => {
+      child_process
+        .spawn('bash', ['-c', cmd], {
+          env: process.env,
+          stdio: [process.stdin, process.stdout, process.stderr],
+        })
+        .once('exit', code => {
+          if (code == 0) {
+            return resolve()
+          }
+          console.error(
+            'Failed on postHook:',
+            JSON.stringify(cmd),
+            'exit code:',
+            code,
+          )
+          reject()
+        })
+    })
   }
 }
 
@@ -109,6 +147,7 @@ async function scanDirectory(
           watch: options.watch,
           config: options.config,
           excludePaths: options.excludePaths,
+          postHooks: options.postHooks,
         },
         childWatchers,
       )
@@ -147,6 +186,7 @@ async function scanDirectory(
       watch: options.watch,
       config: options.config,
       excludePaths: options.excludePaths,
+      postHooks: options.postHooks,
     })
   }
 
@@ -154,7 +194,7 @@ async function scanDirectory(
     const watcher = watch(
       srcDir,
       { persistent: true, recursive: false },
-      (event, filename) => {
+      async (event, filename) => {
         if (event != 'rename') return
 
         const file = path.join(srcDir, filename)
@@ -175,7 +215,8 @@ async function scanDirectory(
           // the file is newly created
           console.info('new file:', file)
           files.push(filename)
-          processFile(filename)
+          await processFile(filename)
+          await runHooks(options)
         }
       },
     )
@@ -236,6 +277,8 @@ async function transpileFile(
 
       let usedTime = endTime - startTime
       console.info('updated file:', srcPath, 'in', usedTime, 'ms')
+
+      await runHooks(options)
     })
   }
 }
