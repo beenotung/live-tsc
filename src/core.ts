@@ -103,8 +103,7 @@ async function runHooks(options: ScanOptions) {
           console.error(
             'Failed on postHook:',
             JSON.stringify(cmd),
-            'exit code:',
-            code,
+            '(exit code: ' + code + ')',
           )
           reject()
         })
