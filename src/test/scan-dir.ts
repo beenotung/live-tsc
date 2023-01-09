@@ -1,23 +1,17 @@
 import { scanPath } from '../core'
 
 async function main() {
-  function run(dir: string) {
-    return scanPath({
-      srcPath: '../ts-liveview/' + dir,
-      destPath: '../ts-liveview/dist/' + dir,
-      watch: false,
-      excludePaths: [],
-      postHooks: [],
-      config: {
-        jsx: 'transform',
-        jsxFactory: 'o',
-        jsxFragment: 'null',
-      },
-    })
-  }
-  await run('server')
-  await run('template')
-  await run('db')
-  await run('client')
+  await scanPath({
+    srcPath: '../ts-liveview',
+    destPath: '../ts-liveview/dist',
+    watch: false,
+    excludePaths: ['../ts-liveview/scripts', '../ts-liveview/public'],
+    postHooks: [],
+    config: {
+      jsx: 'transform',
+      jsxFactory: 'o',
+      jsxFragment: 'null',
+    },
+  })
 }
 main().catch(e => console.error(e))
