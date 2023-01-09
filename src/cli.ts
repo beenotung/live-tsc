@@ -97,7 +97,7 @@ let scanOptions: ScanOptions = {
 }
 
 scanPath(scanOptions).catch(err => {
-  console.error(err)
+  console.error(err || '(error not specified)')
   process.exit(1)
 })
 

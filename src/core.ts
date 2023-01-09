@@ -105,7 +105,7 @@ async function runHooks(options: ScanOptions) {
             JSON.stringify(cmd),
             '(exit code: ' + code + ')',
           )
-          reject()
+          reject(new Error('postHook failed'))
         })
     })
   }
