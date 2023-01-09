@@ -20,26 +20,31 @@ if (args.length <= 2) {
 
 for (let i = 2; i < args.length; i++) {
   let arg = args[i]
+  let takeNext = () => {
+    i++
+    let next = args[i]
+    if (!next) {
+      console.error('Error: missing argument after', JSON.stringify(arg))
+      process.exit(1)
+    }
+    return next
+  }
   switch (arg) {
     case '--src':
     case '-s':
-      i++
-      srcPath = args[i]
+      srcPath = takeNext()
       break
     case '--dest':
     case '-d':
-      i++
-      destPath = args[i]
+      destPath = takeNext()
       break
     case '--exclude':
     case '-e':
-      i++
-      excludePaths.push(args[i])
+      excludePaths.push(takeNext())
       break
     case '--project':
     case '-p':
-      i++
-      tsconfigFile = args[i]
+      tsconfigFile = takeNext()
       break
     case '--watch':
     case '-w':
@@ -51,23 +56,23 @@ for (let i = 2; i < args.length; i++) {
       process.exit(0)
 
     default:
-      console.error('Unknown argument: ' + JSON.stringify(arg))
+      console.error('Error: unknown argument', JSON.stringify(arg))
       process.exit(1)
   }
 }
 
 if (!srcPath) {
-  console.error('No --src specified')
+  console.error('Error: no "--src" specified')
   process.exit(1)
 }
 
 if (!destPath) {
-  console.error('No --dest specified')
+  console.error('Error: no "--dest" specified')
   process.exit(1)
 }
 
 if (!tsconfigFile) {
-  console.error('No --project specified')
+  console.error('Error: no "--project" specified')
   process.exit(1)
 }
 
