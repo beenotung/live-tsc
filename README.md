@@ -67,9 +67,9 @@ This tool is intended to be used by the development server (potentially behind n
 
 Running tsc on slow machine can takes some time.
 
-Developers can get type checking errors from the editor in realtime.
+Developers can get type checking error messages from the editor in realtime, so skipping type check on the build-flow should speed up iteration cycle without compromise.
 
-It is a waste to do type checking twice on the cli and editor's language server.
+It is a waste to do type checking twice in the cli build watcher and editor's language server.
 
 ## Speed Comparison
 
