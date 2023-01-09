@@ -2,7 +2,7 @@
 
 A lightweight esbuild-based implementation of tsc that trim off the types (without type checking)
 
-Intended to be used by ts-liveview
+Intended to be used by [ts-liveview](https://github.com/beenotung/ts-liveview) but it should be generic enough as an alternative to "tsc --watch"
 
 [![npm Package Version](https://img.shields.io/npm/v/live-tsc)](https://www.npmjs.com/package/live-tsc)
 
