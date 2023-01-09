@@ -71,6 +71,15 @@ Developers can get type checking errors from the editor in realtime.
 
 It is a waste to do type checking twice on the cli and editor's language server.
 
+## Speed Comparison
+
+Tested with ts-liveview v5
+
+| Environment                 | Tool     | Time used |
+| --------------------------- | -------- | --------- |
+| archlinux with btrfs on HDD | tsc      | 4.3s      |
+| archlinux with btrfs on HDD | live-tsc | <100ms    |
+
 ## License
 
 This project is licensed with [BSD-2-Clause](./LICENSE)
