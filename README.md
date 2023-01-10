@@ -128,6 +128,10 @@ The time used is the average of multiple runs. In practice, the cold-start run t
 
 You can run the speed test on your machine by running `npx ts-node src/test/measure-speed.ts`
 
+## Todo
+
+The watch mode seems not working on mac mini, maybe use polling as fallback.
+
 ## License
 
 This project is licensed with [BSD-2-Clause](./LICENSE)
