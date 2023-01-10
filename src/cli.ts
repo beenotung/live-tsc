@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
-import path from 'path'
 import { ScanOptions, scanPath } from './core'
 
 let pkg = require('../package.json')
