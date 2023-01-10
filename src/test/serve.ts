@@ -3,8 +3,13 @@ import { scanPath } from '../core'
 scanPath({
   srcPath: '../ts-liveview',
   destPath: '../ts-liveview/dist',
-  watch: false,
-  excludePaths: ['../ts-liveview/scripts', '../ts-liveview/public'],
+  watch: true,
+  excludePaths: [
+    '../ts-liveview/scripts',
+    '../ts-liveview/public',
+    '../ts-liveview/data',
+    '../ts-liveview/db/data',
+  ],
   postHooks: ['npx fix-esm-import-path dist/db/proxy.js'],
   cwd: '../ts-liveview',
   serverFile: 'dist/server/index.js',
