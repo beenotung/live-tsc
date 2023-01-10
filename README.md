@@ -25,7 +25,7 @@ npx live-tsc \
   --exclude ./public \
   --exclude ./data \
   --exclude ./db/data \
-  --post-hook "fix-esm-import-path dist/db/proxy.js" \
+  --post-hook "npx fix-esm-import-path dist/db/proxy.js" \
   --server  ./dist/server/index.js \
   --open "https://localhost:8100"
 ```
