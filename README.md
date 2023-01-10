@@ -75,10 +75,43 @@ It is a waste to do type checking twice in the cli build watcher and editor's la
 
 Tested with ts-liveview v5
 
-| Environment                 | Tool     | Time used |
-| --------------------------- | -------- | --------- |
-| archlinux with btrfs on HDD | tsc      | 4.3s      |
-| archlinux with btrfs on HDD | live-tsc | <100ms    |
+### Environments
+
+**Env [1]**:
+
+- archlinux Desktop
+- btrfs on HDD
+
+**Env [2]**:
+
+- Mac mini (2014)
+- 2.6 GHz Dual-Core Intel i5
+- Macintosh HD (1TB SATA Disk)
+
+### Run Type
+
+**Fresh Build**:
+Removed the outDir before run
+
+**Incremental Build**:
+Keep the outDir from previous run
+
+### Comparison
+
+| Env | Tool     | Fresh Build | Incremental Build | Improvement |
+| --- | -------- | ----------- | ----------------- | ----------- |
+| [1] | tsc      | ?           | 4.3s              | ?           |
+| [1] | live-tsc | ?           | 0.1s              | ?           |
+| [2] | tsc      | 11.2s       | 2.8s              | 4x          |
+| [2] | live-tsc | 0.36s       | 0.22s             | 1.6x        |
+
+Speedup rate for fresh build: 31x
+
+Speedup rate for incremental build: 12x
+
+The time used is the average of multiple runs. In practice, the cold-start run time of fresh build is much longer if the Typescript files are not already cached by the OS.
+
+You can run the speed test on your machine by running `npx ts-node src/test/measure-speed.ts`
 
 ## License
 
