@@ -105,24 +105,28 @@ export async function scanPath(options: ScanOptions) {
 
   if (options.watch) {
     console.info('watching for changes...')
+    console.info('Tips: you can press Enter to manually re-scan')
+    process.stdin.on('data', async (buffer: Buffer) => {
+      let data = buffer.toString().trim()
+      switch (data) {
+        case '':
+        case 'r':
+        case 'reload':
+          console.info('re-scanning...')
+          await Promise.all([stopServer(context), scan()])
+          await runServer(context)
+      }
+    })
+    process.on('SIGINT', async () => {
+      await stopServer(context)
+      process.exit(0)
+    })
   }
 
   await runServer(context)
   if (context.open) {
     await open(context.open)
   }
-
-  process.stdin.on('data', async (buffer: Buffer) => {
-    let data = buffer.toString().trim()
-    switch (data) {
-      case '':
-      case 'r':
-      case 'reload':
-        console.info('re-scanning...')
-        await Promise.all([stopServer(context), scan()])
-        await runServer(context)
-    }
-  })
 }
 
 async function stopServer(context: Context) {
