@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
+import path from 'path'
 import { ScanOptions, scanPath } from './core'
 
 let pkg = require('../package.json')
@@ -13,6 +14,9 @@ let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
 let postHooks: string[] = []
+let serverFile = ''
+let open = ''
+let cwd = process.cwd()
 
 if (args.length <= 2) {
   showHelp()
@@ -54,6 +58,17 @@ for (let i = 2; i < args.length; i++) {
     case '--post-hook':
       postHooks.push(takeNext())
       break
+    case '--server':
+      serverFile = takeNext()
+      break
+    case '--cwd':
+    case '-c':
+      cwd = takeNext()
+      break
+    case '--open':
+    case '-o':
+      open = takeNext()
+      break
     case '--help':
     case '-h':
       showHelp()
@@ -80,6 +95,11 @@ if (!tsconfigFile) {
   process.exit(1)
 }
 
+if (!cwd) {
+  console.error('Error: no "--cwd" specified')
+  process.exit(1)
+}
+
 let compilerOptions =
   JSON.parse(fs.readFileSync(tsconfigFile).toString()).compilerOptions || {}
 
@@ -89,6 +109,9 @@ let scanOptions: ScanOptions = {
   watch,
   excludePaths,
   postHooks,
+  cwd,
+  serverFile,
+  open,
   config: {
     jsx: compilerOptions.jsx ? 'transform' : undefined,
     jsxFactory: compilerOptions.jsxFactory,
@@ -117,7 +140,10 @@ Example:
     --dest    ../ts-liveview/dist \\
     --exclude ../ts-liveview/scripts \\
     --exclude ../ts-liveview/public \\
-    --post-hook "npx fix-esm-import-path ../ts-liveview/dist/db/proxy.js"
+    --post-hook "npx fix-esm-import-path dist/db/proxy.js" \\
+    --server  ../ts-liveview/dist/server/index.js \\
+    --cwd     ../ts-liveview \\
+    --open "https://localhost:8100"
 
 Options:
 
@@ -146,6 +172,18 @@ Options:
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;
     Can be specified multiple times;
+
+  --server <file>
+    Specify the path of server js file
+
+  --cwd <dir>
+    Specify the current working directory for the server and postHooks
+    Alias: -c
+    Default: sample as process.cwd
+
+  --open <url>
+    Open the url in the default browser after initial scanning
+    Alias: -o
 
   --help
     Show help message

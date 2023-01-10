@@ -36,7 +36,8 @@
     "build": "tsc -p ."
   },
   "dependencies": {
-    "esbuild": "^0.16.9"
+    "esbuild": "^0.16.9",
+    "open": "^8.4.0"
   },
   "devDependencies": {
     "@types/node": "^18.11.17",

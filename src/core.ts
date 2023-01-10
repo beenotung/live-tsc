@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import esbuild from 'esbuild'
 import child_process from 'child_process'
+import open from 'open'
 
 let skipFilenames = [
   'node_modules',
@@ -57,9 +58,12 @@ let copyExtnames = ['.js']
 export interface ScanOptions {
   srcPath: string
   destPath: string
-  watch: boolean
+  watch?: boolean
   excludePaths: string[]
   postHooks: string[]
+  serverFile?: string
+  cwd?: string
+  open?: string
   config: {
     jsx?: 'transform' | 'preserve' | 'automatic'
     jsxFactory?: string
@@ -67,36 +71,89 @@ export interface ScanOptions {
   }
 }
 
-export async function scanPath(options: ScanOptions) {
-  let startTime = Date.now()
+type Context = Omit<ScanOptions, 'srcPath' | 'destPath'> & {
+  serverProcess?: child_process.ChildProcess
+}
+type Paths = Pick<ScanOptions, 'srcPath' | 'destPath'>
 
+export async function scanPath(options: ScanOptions) {
   if (!options.excludePaths.includes(options.destPath)) {
     options.excludePaths.push(options.destPath)
   }
-  let stat = await fs.stat(options.srcPath)
-  if (stat.isFile()) {
-    await scanFile(options)
-  } else if (stat.isDirectory()) {
-    await scanDirectory(options, {})
+
+  const context: Context = options
+
+  const stat = await fs.stat(options.srcPath)
+
+  async function scan() {
+    const startTime = Date.now()
+
+    if (stat.isFile()) {
+      await scanFile(context, options)
+    } else if (stat.isDirectory()) {
+      await scanDirectory(context, options, {})
+    }
+
+    const endTime = Date.now()
+    const usedTime = endTime - startTime
+    console.info('completed scanning in', usedTime, 'ms')
+
+    await runHooks(options)
   }
 
-  let endTime = Date.now()
-  let usedTime = endTime - startTime
-  console.info('completed scanning in', usedTime, 'ms')
-
-  await runHooks(options)
+  await scan()
 
   if (options.watch) {
     console.info('watching for changes...')
   }
+
+  await runServer(context)
+  if (context.open) {
+    await open(context.open)
+  }
+
+  process.stdin.on('data', async (buffer: Buffer) => {
+    let data = buffer.toString().trim()
+    switch (data) {
+      case '':
+      case 'r':
+      case 'reload':
+        console.info('re-scanning...')
+        await Promise.all([stopServer(context), scan()])
+        await runServer(context)
+    }
+  })
 }
 
-async function runHooks(options: ScanOptions) {
-  for (let cmd of options.postHooks) {
+async function stopServer(context: Context) {
+  const child = context.serverProcess
+  if (!child) return
+  console.info('stopping server for restart...')
+  delete context.serverProcess
+  await new Promise(resolve => {
+    child.once('exit', resolve)
+    child.kill()
+  })
+}
+
+async function runServer(context: Context) {
+  if (!context.serverFile) return
+  await stopServer(context)
+  console.info('starting server...')
+  context.serverProcess = child_process.spawn('node', [context.serverFile], {
+    cwd: context.cwd,
+    env: process.env,
+    stdio: [process.stdin, process.stdout, process.stderr],
+  })
+}
+
+async function runHooks(context: Context) {
+  for (let cmd of context.postHooks) {
     console.info('running postHook', JSON.stringify(cmd))
     await new Promise<void>((resolve, reject) => {
       child_process
         .spawn('bash', ['-c', cmd], {
+          cwd: context.cwd,
           env: process.env,
           stdio: [process.stdin, process.stdout, process.stderr],
         })
@@ -116,12 +173,13 @@ async function runHooks(options: ScanOptions) {
 }
 
 async function scanDirectory(
-  options: ScanOptions,
+  context: Context,
+  paths: Paths,
   parentWatchers: Record<string, FSWatcher>,
 ) {
-  const { srcPath: srcDir, destPath: destDir } = options
+  const { srcPath: srcDir, destPath: destDir } = paths
 
-  if (options.excludePaths.includes(srcDir)) return
+  if (context.excludePaths.includes(srcDir)) return
 
   const childWatchers: Record<string, FSWatcher> = {}
 
@@ -135,7 +193,7 @@ async function scanDirectory(
     if (skipFilenames.includes(file)) return
 
     const srcPath = path.join(srcDir, file)
-    if (options.excludePaths.includes(srcPath)) return
+    if (context.excludePaths.includes(srcPath)) return
 
     let destPath = path.join(destDir, file)
 
@@ -144,13 +202,10 @@ async function scanDirectory(
     if (stat.isDirectory()) {
       await fs.mkdir(destPath, { recursive: true })
       await scanDirectory(
+        context,
         {
           srcPath: srcPath,
           destPath: destPath,
-          watch: options.watch,
-          config: options.config,
-          excludePaths: options.excludePaths,
-          postHooks: options.postHooks,
         },
         childWatchers,
       )
@@ -183,17 +238,13 @@ async function scanDirectory(
       return
     }
 
-    await scanFile({
+    await scanFile(context, {
       srcPath,
       destPath,
-      watch: options.watch,
-      config: options.config,
-      excludePaths: options.excludePaths,
-      postHooks: options.postHooks,
     })
   }
 
-  if (options.watch) {
+  if (context.watch) {
     const watcher = watch(
       srcDir,
       { persistent: true, recursive: false },
@@ -202,7 +253,7 @@ async function scanDirectory(
 
         const file = path.join(srcDir, filename)
 
-        if (options.excludePaths.includes(file)) return
+        if (context.excludePaths.includes(file)) return
 
         const fileIdx = files.indexOf(filename)
         if (fileIdx != -1) {
@@ -219,7 +270,7 @@ async function scanDirectory(
           console.info('new file:', file)
           files.push(filename)
           await processFile(filename)
-          await runHooks(options)
+          await runHooks(context)
         }
       },
     )
@@ -228,18 +279,18 @@ async function scanDirectory(
   }
 }
 
-async function scanFile(options: ScanOptions) {
-  let { srcPath, destPath } = options
-  await transpileFile(srcPath, destPath, options)
+async function scanFile(context: Context, paths: Paths) {
+  let { srcPath, destPath } = paths
+  await transpileFile(srcPath, destPath, context)
 }
 
 async function transpileFile(
   srcPath: string,
   destPath: string,
-  options: ScanOptions,
+  context: Context,
 ) {
   let sourceCode = (await fs.readFile(srcPath)).toString()
-  let transpiledCode = await transpile(sourceCode, srcPath, options.config)
+  let transpiledCode = await transpile(sourceCode, srcPath, context.config)
 
   try {
     const destCode = (await fs.readFile(destPath)).toString()
@@ -252,7 +303,7 @@ async function transpileFile(
 
   await fs.writeFile(destPath, transpiledCode)
 
-  if (options.watch) {
+  if (context.watch) {
     const watcher = watch(srcPath, { persistent: true }, async event => {
       if (event == 'rename') {
         watcher.close()
@@ -269,7 +320,7 @@ async function transpileFile(
       let newTranspiledCode = await transpile(
         newSourceCode,
         srcPath,
-        options.config,
+        context.config,
       )
       if (newTranspiledCode == transpiledCode) return
       transpiledCode = newTranspiledCode
@@ -281,7 +332,8 @@ async function transpileFile(
       let usedTime = endTime - startTime
       console.info('updated file:', srcPath, 'in', usedTime, 'ms')
 
-      await runHooks(options)
+      await runHooks(context)
+      await runServer(context)
     })
   }
 }

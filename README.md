@@ -24,7 +24,10 @@ npx live-tsc \
   --dest    ../ts-liveview/dist \
   --exclude ../ts-liveview/scripts \
   --exclude ../ts-liveview/public \
-  --post-hook "npx fix-esm-import-path ../ts-liveview/dist/db/proxy.js"
+  --post-hook "npx fix-esm-import-path dist/db/proxy.js" \
+  --server  ../ts-liveview/dist/server/index.js \
+  --cwd     ../ts-liveview \
+  --open "https://localhost:8100"
 ```
 
 Options:
@@ -55,6 +58,18 @@ Options:
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;
     Can be specified multiple times;
+
+  --server <file>
+    Specify the path of server js file
+
+  --cwd <dir>
+    Specify the current working directory for the server and postHooks
+    Alias: -c
+    Default: sample as process.cwd
+
+  --open <url>
+    Open the url in the default browser after initial scanning
+    Alias: -o
 
   --help
     Show help message
