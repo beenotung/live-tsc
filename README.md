@@ -19,14 +19,14 @@ Usage Example:
 ```bash
 npx live-tsc \
   --watch \
-  --project ../ts-liveview/tsconfig.json \
-  --src     ../ts-liveview \
-  --dest    ../ts-liveview/dist \
-  --exclude ../ts-liveview/scripts \
-  --exclude ../ts-liveview/public \
-  --post-hook "npx fix-esm-import-path dist/db/proxy.js" \
-  --server  ../ts-liveview/dist/server/index.js \
-  --cwd     ../ts-liveview \
+  --src     ./ \
+  --dest    ./dist \
+  --exclude ./scripts \
+  --exclude ./public \
+  --exclude ./data \
+  --exclude ./db/data \
+  --post-hook "fix-esm-import-path dist/db/proxy.js" \
+  --server  ./dist/server/index.js \
   --open "https://localhost:8100"
 ```
 
