@@ -103,6 +103,13 @@ Tested with ts-liveview v5
 - 2.6 GHz Dual-Core Intel i5
 - Macintosh HD (1TB SATA Disk)
 
+**Env [3]**:
+
+- Kudu3 laptop
+- archlinux
+- 6th Gen 2.6 GHz 4 Core Intel i7
+- zfs on top of lvm
+
 ### Run Type
 
 **Fresh Build**:
@@ -119,10 +126,13 @@ Keep the outDir from previous run
 | [1] | live-tsc | ?           | 0.1s              | ?           |
 | [2] | tsc      | 11.2s       | 2.8s              | 4x          |
 | [2] | live-tsc | 0.36s       | 0.22s             | 1.6x        |
+| [3] | tsc      | 3.2s        | 1.9s              | 1.6x        |
+| [3] | live-tsc | 0.152s      | 0.148s            | 1.02        |
 
-Speedup rate for fresh build: 31x
-
-Speedup rate for incremental build: 12x
+| Env | Fresh bulid Speedup Rate | Incremtntal Build Speedup Rate |
+| --- | ------------------------ | ------------------------------ |
+| [2] | 31x                      | 12x                            |
+| [3] | 21x                      | 12x                            |
 
 The time used is the average of multiple runs. In practice, the cold-start run time of fresh build is much longer if the Typescript files are not already cached by the OS.
 
