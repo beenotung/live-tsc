@@ -1,8 +1,15 @@
-import { FSWatcher, watch } from 'fs'
+import {
+  FSWatcher,
+  watch,
+  unlinkSync,
+  existsSync,
+  readFileSync,
+  WatchEventType,
+} from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 import esbuild from 'esbuild'
-import child_process from 'child_process'
+import child_process, { execSync } from 'child_process'
 import open from 'open'
 
 let skipFilenames = [
@@ -101,9 +108,8 @@ export async function scanPath(options: ScanOptions) {
     await runHooks(options)
   }
 
-  await scan()
-
-  if (options.watch) {
+  let setupWatch = () => {
+    if (!options.watch) return
     console.info('watching for changes...')
     console.info('Tips: you can press Enter to manually re-scan')
     process.stdin.on('data', async (buffer: Buffer) => {
@@ -123,9 +129,40 @@ export async function scanPath(options: ScanOptions) {
     })
   }
 
-  await runServer(context)
-  if (context.open) {
-    await open(context.open)
+  try {
+    await scan()
+    setupWatch()
+    setupWatch = () => {}
+    await stopLastServer()
+    await runServer(context)
+  } catch (error) {
+    console.error(error)
+    setupWatch()
+  }
+}
+
+async function stopLastServer() {
+  if (!existsSync(serverPidFile)) return
+  let pid = parseInt(readFileSync(serverPidFile).toString())
+  if (!pid) return
+  if (!isPidAlive(pid)) return
+  process.kill(pid)
+  while (isPidAlive(pid)) {
+    await sleep(3)
+  }
+  unlinkSync(serverPidFile)
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function isPidAlive(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return false
   }
 }
 
@@ -138,7 +175,12 @@ async function stopServer(context: Context) {
     child.once('exit', resolve)
     child.kill()
   })
+  if (existsSync(serverPidFile)) {
+    unlinkSync(serverPidFile)
+  }
 }
+
+const serverPidFile = 'server.pid'
 
 async function runServer(context: Context) {
   if (!context.serverFile) return
@@ -149,6 +191,11 @@ async function runServer(context: Context) {
     env: process.env,
     stdio: [process.stdin, process.stdout, process.stderr],
   })
+  await fs.writeFile(serverPidFile, String(context.serverProcess.pid))
+  if (context.open) {
+    await open(context.open)
+    delete context.open
+  }
 }
 
 async function runHooks(context: Context) {
@@ -252,7 +299,7 @@ async function scanDirectory(
     const watcher = watch(
       srcDir,
       { persistent: true, recursive: false },
-      async (event, filename) => {
+      wrapFn2(async (event, filename) => {
         if (event != 'rename') return
 
         const file = path.join(srcDir, filename)
@@ -276,7 +323,7 @@ async function scanDirectory(
           await processFile(filename)
           await runHooks(context)
         }
-      },
+      }),
     )
     const selfFilename = path.basename(srcDir)
     parentWatchers[selfFilename] = watcher
@@ -308,7 +355,7 @@ async function transpileFile(
   await fs.writeFile(destPath, transpiledCode)
 
   if (context.watch) {
-    const watcher = watch(srcPath, { persistent: true }, async event => {
+    const onEvent = wrapFn1(async (event: WatchEventType) => {
       if (event == 'rename') {
         watcher.close()
         return
@@ -339,6 +386,7 @@ async function transpileFile(
       await runHooks(context)
       await runServer(context)
     })
+    const watcher = watch(srcPath, { persistent: true }, onEvent)
   }
 }
 
@@ -359,6 +407,26 @@ async function transpile(
     throw new TranspileError(file, error.errors)
   }
   return code.replace(/ \/\* @__PURE__ \*\/ /g, ' ')
+}
+
+function wrapFn1<A>(fn: (a: A) => any): (a: A) => void {
+  return async (a: A) => {
+    try {
+      await fn(a)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+}
+
+function wrapFn2<A, B>(fn: (a: A, b: B) => any): (a: A, b: B) => void {
+  return async (a: A, b: B) => {
+    try {
+      await fn(a, b)
+    } catch (error) {
+      console.error(error)
+    }
+  }
 }
 
 class TranspileError extends Error {

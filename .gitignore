@@ -10,3 +10,6 @@ dist
 
 # IDE
 .vscode
+
+# live server
+server.pid
