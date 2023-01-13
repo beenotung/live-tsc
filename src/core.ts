@@ -9,7 +9,7 @@ import {
 import fs from 'fs/promises'
 import path from 'path'
 import esbuild from 'esbuild'
-import child_process, { execSync } from 'child_process'
+import child_process from 'child_process'
 import open from 'open'
 
 let skipFilenames = [
