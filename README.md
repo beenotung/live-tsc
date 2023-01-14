@@ -50,6 +50,7 @@ Options:
   --project <file>
     Specify the path of tsconfig file
     Alias: -p
+    Default: tsconfig.json
 
   --watch
     Watch for changes and rerun
