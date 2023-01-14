@@ -4,9 +4,9 @@ import fs from 'fs'
 import { ScanOptions, scanPath } from './core'
 import type { Format } from 'esbuild'
 
-let pkg = require('../package.json')
+const pkg = require('../package.json')
 
-let args = process.argv
+const args = process.argv
 
 let srcPath = ''
 let destPath = ''
@@ -25,10 +25,10 @@ if (args.length <= 2) {
 }
 
 for (let i = 2; i < args.length; i++) {
-  let arg = args[i]
-  let takeNext = () => {
+  const arg = args[i]
+  const takeNext = () => {
     i++
-    let next = args[i]
+    const next = args[i]
     if (!next) {
       console.error('Error: missing argument after', JSON.stringify(arg))
       process.exit(1)
@@ -72,7 +72,7 @@ for (let i = 2; i < args.length; i++) {
       break
     case '--format':
     case '-f':
-      let formatStr = takeNext()
+      const formatStr = takeNext()
   
       if (formatStr !== 'cjs' && formatStr !== 'esm' && formatStr !== 'iife') {
         console.error('Error: unknown format', JSON.stringify(formatStr))
@@ -112,10 +112,10 @@ if (!cwd) {
   process.exit(1)
 }
 
-let compilerOptions =
+const compilerOptions =
   JSON.parse(fs.readFileSync(tsconfigFile).toString()).compilerOptions || {}
 
-let scanOptions: ScanOptions = {
+const scanOptions: ScanOptions = {
   srcPath,
   destPath,
   watch,
