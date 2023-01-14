@@ -185,6 +185,7 @@ Options:
   --format <cjs|esm|iife>
     Sets the output format for the generated JavaScript files
     Alias: -f
+    Default: esm
 
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;
