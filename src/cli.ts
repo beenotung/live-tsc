@@ -2,16 +2,18 @@
 
 import fs from 'fs'
 import { ScanOptions, scanPath } from './core'
+import type { Format } from 'esbuild'
 
-let pkg = require('../package.json')
+const pkg = require('../package.json')
 
-let args = process.argv
+const args = process.argv
 
 let srcPath = ''
 let destPath = ''
 let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
+let format: Format = 'esm'
 let postHooks: string[] = []
 let serverFile = ''
 let open = ''
@@ -23,10 +25,10 @@ if (args.length <= 2) {
 }
 
 for (let i = 2; i < args.length; i++) {
-  let arg = args[i]
-  let takeNext = () => {
+  const arg = args[i]
+  const takeNext = () => {
     i++
-    let next = args[i]
+    const next = args[i]
     if (!next) {
       console.error('Error: missing argument after', JSON.stringify(arg))
       process.exit(1)
@@ -68,6 +70,17 @@ for (let i = 2; i < args.length; i++) {
     case '-o':
       open = takeNext()
       break
+    case '--format':
+    case '-f':
+      const formatStr = takeNext()
+  
+      if (formatStr !== 'cjs' && formatStr !== 'esm' && formatStr !== 'iife') {
+        console.error('Error: unknown format', JSON.stringify(formatStr))
+        process.exit(1)
+      }
+  
+      format = formatStr 
+      break
     case '--help':
     case '-h':
       showHelp()
@@ -99,10 +112,10 @@ if (!cwd) {
   process.exit(1)
 }
 
-let compilerOptions =
+const compilerOptions =
   JSON.parse(fs.readFileSync(tsconfigFile).toString()).compilerOptions || {}
 
-let scanOptions: ScanOptions = {
+const scanOptions: ScanOptions = {
   srcPath,
   destPath,
   watch,
@@ -115,6 +128,7 @@ let scanOptions: ScanOptions = {
     jsx: compilerOptions.jsx ? 'transform' : undefined,
     jsxFactory: compilerOptions.jsxFactory,
     jsxFragment: compilerOptions.jsxFragmentFactory,
+    format,
   },
 }
 
@@ -167,6 +181,11 @@ Options:
   --watch
     Watch for changes and rerun
     Alias: -w
+    
+  --format <cjs|esm|iife>
+    Sets the output format for the generated JavaScript files
+    Alias: -f
+    Default: esm
 
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;

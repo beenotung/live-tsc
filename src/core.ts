@@ -75,6 +75,7 @@ export interface ScanOptions {
     jsx?: 'transform' | 'preserve' | 'automatic'
     jsxFactory?: string
     jsxFragment?: string
+    format?: esbuild.Format
   }
 }
 
@@ -401,6 +402,7 @@ async function transpile(
       jsx: config.jsx,
       jsxFactory: config.jsxFactory,
       jsxFragment: config.jsxFragment,
+      format: config.format,
     })
     code = result.code
   } catch (error: any) {
