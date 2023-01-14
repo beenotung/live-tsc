@@ -2,6 +2,7 @@
 
 import fs from 'fs'
 import { ScanOptions, scanPath } from './core'
+import type { Format } from 'esbuild'
 
 let pkg = require('../package.json')
 
@@ -12,6 +13,7 @@ let destPath = ''
 let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
+let format: Format = 'esm'
 let postHooks: string[] = []
 let serverFile = ''
 let open = ''
@@ -68,6 +70,17 @@ for (let i = 2; i < args.length; i++) {
     case '-o':
       open = takeNext()
       break
+    case '--format':
+    case '-f':
+      let formatStr = takeNext()
+  
+      if (formatStr !== 'cjs' && formatStr !== 'esm' && formatStr !== 'iife') {
+        console.error('Error: unknown format', JSON.stringify(formatStr))
+        process.exit(1)
+      }
+  
+      format = formatStr 
+      break
     case '--help':
     case '-h':
       showHelp()
@@ -115,6 +128,7 @@ let scanOptions: ScanOptions = {
     jsx: compilerOptions.jsx ? 'transform' : undefined,
     jsxFactory: compilerOptions.jsxFactory,
     jsxFragment: compilerOptions.jsxFragmentFactory,
+    format,
   },
 }
 
@@ -167,6 +181,10 @@ Options:
   --watch
     Watch for changes and rerun
     Alias: -w
+    
+  --format <cjs|esm|iife>
+    Sets the output format for the generated JavaScript files
+    Alias: -f
 
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;
