@@ -73,13 +73,13 @@ for (let i = 2; i < args.length; i++) {
     case '--format':
     case '-f':
       const formatStr = takeNext()
-  
+
       if (formatStr !== 'cjs' && formatStr !== 'esm' && formatStr !== 'iife') {
         console.error('Error: unknown format', JSON.stringify(formatStr))
         process.exit(1)
       }
-  
-      format = formatStr 
+
+      format = formatStr
       break
     case '--help':
     case '-h':
