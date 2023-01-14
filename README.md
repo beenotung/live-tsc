@@ -56,6 +56,11 @@ Options:
     Watch for changes and rerun
     Alias: -w
 
+  --format <cjs|esm|iife>
+    Sets the output format for the generated JavaScript files
+    Alias: -f
+    Default: esm
+
   --post-hook <command>
     Add command to run after initial scan and subsequence updates;
     Can be specified multiple times;
