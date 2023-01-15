@@ -67,7 +67,7 @@ export interface ScanOptions {
   destPath: string
   watch?: boolean
   excludePaths: string[]
-  postHooks: string[]
+  postHooks: Hook[]
   serverFile?: string
   cwd?: string
   open?: string
@@ -79,8 +79,14 @@ export interface ScanOptions {
   }
 }
 
+export interface Hook {
+  watchFile?: string
+  command: string
+}
+
 type Context = Omit<ScanOptions, 'srcPath' | 'destPath'> & {
   serverProcess?: child_process.ChildProcess
+  watchers: Set<FSWatcher>
 }
 type Paths = Pick<ScanOptions, 'srcPath' | 'destPath'>
 
@@ -89,7 +95,10 @@ export async function scanPath(options: ScanOptions) {
     options.excludePaths.push(options.destPath)
   }
 
-  const context: Context = options
+  const context: Context = {
+    ...options,
+    watchers: new Set(),
+  }
 
   const stat = await fs.stat(options.srcPath)
 
@@ -106,7 +115,7 @@ export async function scanPath(options: ScanOptions) {
     const usedTime = endTime - startTime
     console.info('completed scanning in', usedTime, 'ms')
 
-    await runHooks(options)
+    await runHooks(context, { type: 'init' })
   }
 
   let setupWatch = () => {
@@ -120,6 +129,8 @@ export async function scanPath(options: ScanOptions) {
         case 'r':
         case 'reload':
           console.info('re-scanning...')
+          context.watchers.forEach(watcher => watcher.close())
+          context.watchers.clear()
           await Promise.all([stopServer(context), scan()])
           await runServer(context)
       }
@@ -199,29 +210,63 @@ async function runServer(context: Context) {
   }
 }
 
-async function runHooks(context: Context) {
-  for (let cmd of context.postHooks) {
-    console.info('running postHook', JSON.stringify(cmd))
-    await new Promise<void>((resolve, reject) => {
-      child_process
-        .spawn('bash', ['-c', cmd], {
-          cwd: context.cwd,
-          env: process.env,
-          stdio: [process.stdin, process.stdout, process.stderr],
-        })
-        .once('exit', code => {
-          if (code == 0) {
-            return resolve()
+type RunHookReason =
+  | {
+      type: 'init'
+    }
+  | { type: 'update'; file: string }
+
+async function runHooks(context: Context, reason: RunHookReason) {
+  for (let hook of context.postHooks) {
+    if (reason.type == 'init' && hook.watchFile) {
+      const { watchFile } = hook
+      const watcher = watch(
+        watchFile,
+        { persistent: true },
+        wrapFn1(async event => {
+          if (event == 'rename') {
+            watcher.close()
+            context.watchers.delete(watcher)
+            return
           }
-          console.error(
-            'Failed on postHook:',
-            JSON.stringify(cmd),
-            '(exit code: ' + code + ')',
-          )
-          reject(new Error('postHook failed'))
-        })
-    })
+          if (event != 'change') return
+          await runHook(context, hook, { type: 'update', file: watchFile })
+        }),
+      )
+      context.watchers.add(watcher)
+    }
+    if (reason.type == 'update' && hook.watchFile) {
+      continue
+    }
+    await runHook(context, hook, reason)
   }
+}
+async function runHook(context: Context, hook: Hook, reason: RunHookReason) {
+  console.info(
+    'running postHook',
+    JSON.stringify(hook.command),
+    'reason:',
+    reason,
+  )
+  await new Promise<void>((resolve, reject) => {
+    child_process
+      .spawn('bash', ['-c', hook.command], {
+        cwd: context.cwd,
+        env: process.env,
+        stdio: [process.stdin, process.stdout, process.stderr],
+      })
+      .once('exit', code => {
+        if (code == 0) {
+          return resolve()
+        }
+        console.error(
+          'Failed on postHook:',
+          JSON.stringify(hook.command),
+          '(exit code: ' + code + ')',
+        )
+        reject(new Error('postHook failed'))
+      })
+  })
 }
 
 async function scanDirectory(
@@ -316,18 +361,20 @@ async function scanDirectory(
           if (childWatcher) {
             childWatcher.close()
             delete childWatchers[filename]
+            context.watchers.delete(childWatcher)
           }
         } else {
           // the file is newly created
           console.info('new file:', file)
           files.push(filename)
           await processFile(filename)
-          await runHooks(context)
+          await runHooks(context, { type: 'update', file })
         }
       }),
     )
     const selfFilename = path.basename(srcDir)
     parentWatchers[selfFilename] = watcher
+    context.watchers.add(watcher)
   }
 }
 
@@ -360,38 +407,41 @@ async function transpileFile(
   }
 
   if (context.watch) {
-    const onEvent = wrapFn1(async (event: WatchEventType) => {
-      if (event == 'rename') {
-        watcher.close()
-        return
-      }
+    const watcher = watch(
+      srcPath,
+      { persistent: true },
+      wrapFn1(async (event: WatchEventType) => {
+        if (event == 'rename') {
+          watcher.close()
+          context.watchers.delete(watcher)
+          return
+        }
+        if (event != 'change') return
+        let newSourceCode = (await fs.readFile(srcPath)).toString()
+        if (newSourceCode == sourceCode) return
+        sourceCode = newSourceCode
 
-      if (event != 'change') return
+        let startTime = Date.now()
+        let newTranspiledCode = await transpile(
+          newSourceCode,
+          srcPath,
+          context.config,
+        )
+        if (newTranspiledCode == transpiledCode) return
+        transpiledCode = newTranspiledCode
 
-      let newSourceCode = (await fs.readFile(srcPath)).toString()
-      if (newSourceCode == sourceCode) return
-      sourceCode = newSourceCode
+        await fs.writeFile(destPath, newTranspiledCode)
 
-      let startTime = Date.now()
-      let newTranspiledCode = await transpile(
-        newSourceCode,
-        srcPath,
-        context.config,
-      )
-      if (newTranspiledCode == transpiledCode) return
-      transpiledCode = newTranspiledCode
+        let endTime = Date.now()
 
-      await fs.writeFile(destPath, newTranspiledCode)
+        let usedTime = endTime - startTime
+        console.info('updated file:', srcPath, 'in', usedTime, 'ms')
 
-      let endTime = Date.now()
-
-      let usedTime = endTime - startTime
-      console.info('updated file:', srcPath, 'in', usedTime, 'ms')
-
-      await runHooks(context)
-      await runServer(context)
-    })
-    const watcher = watch(srcPath, { persistent: true }, onEvent)
+        await runHooks(context, { type: 'update', file: srcPath })
+        await runServer(context)
+      }),
+    )
+    context.watchers.add(watcher)
   }
 }
 

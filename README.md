@@ -61,14 +61,15 @@ Options:
     Alias: -f
     Default: esm
 
-  --post-hook <command>
+  --post-hook <command>[#watch:<file>]
     Add command to run after initial scan and subsequence updates;
+    If the watch file is specified, it will be re-run only if the specified file is changed;
     Can be specified multiple times;
 
-  --post-script <npm script>
+  --post-script <npm script>[#watch:<file>]
     Add npm script to run after initial scan and subsequence updates;
-    Can be specified multiple times;
-    This is a shortcut as: --post-hook "npm run <script>"
+    This is a shortcut as: --post-hook "npm run <script>";
+    Details refers to "--post-hook"
 
   --server <file>
     Specify the path of server js file

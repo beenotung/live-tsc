@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
-import { ScanOptions, scanPath } from './core'
+import { Hook, ScanOptions, scanPath } from './core'
 import type { Format } from 'esbuild'
 
 const pkg = require('../package.json')
@@ -14,7 +14,7 @@ let excludePaths: string[] = []
 let tsconfigFile = 'tsconfig.json'
 let watch = false
 let format: Format = 'esm'
-let postHooks: string[] = []
+let postHooks: Hook[] = []
 let serverFile = ''
 let open = ''
 let cwd = process.cwd()
@@ -57,11 +57,16 @@ for (let i = 2; i < args.length; i++) {
       watch = true
       break
     case '--post-hook':
-      postHooks.push(takeNext())
+      postHooks.push(parseHook(takeNext()))
       break
-    case '--post-script':
-      postHooks.push('npm run ' + takeNext())
+    case '--post-script': {
+      const hook = parseHook(takeNext())
+      postHooks.push({
+        ...hook,
+        command: 'npm run ' + hook.command,
+      })
       break
+    }
     case '--server':
       serverFile = takeNext()
       break
@@ -192,14 +197,15 @@ Options:
     Alias: -f
     Default: esm
 
-  --post-hook <command>
+  --post-hook <command>[#watch:<file>]
     Add command to run after initial scan and subsequence updates;
+    If the watch file is specified, it will be re-run only if the specified file is changed;
     Can be specified multiple times;
 
-  --post-script <npm script>
+  --post-script <npm script>[#watch:<file>]
     Add npm script to run after initial scan and subsequence updates;
-    Can be specified multiple times;
-    This is a shortcut as: --post-hook "npm run <script>"
+    This is a shortcut as: --post-hook "npm run <script>";
+    Details refers to "--post-hook"
 
   --server <file>
     Specify the path of server js file
@@ -218,4 +224,12 @@ Options:
     Alias: -h
 `.trim(),
   )
+}
+
+function parseHook(arg: string): Hook {
+  let match = arg.match(/#watch:(.*?)$/)
+  if (!match) return { command: arg }
+  let watch = match[1]
+  let command = arg.slice(0, arg.length - match[0].length)
+  return { watchFile: watch, command }
 }

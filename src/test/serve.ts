@@ -10,7 +10,7 @@ scanPath({
     '../ts-liveview/data',
     '../ts-liveview/db/data',
   ],
-  postHooks: ['npx fix-esm-import-path dist/db/proxy.js'],
+  postHooks: [{ command: 'npx fix-esm-import-path dist/db/proxy.js' }],
   cwd: '../ts-liveview',
   serverFile: 'dist/server/index.js',
   open: 'https://localhost:8100',
