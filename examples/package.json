@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run build -- --watch",
-    "build": "live-tsc --src src --dest dist --server dist/server.js --post-hook \"npm run gen\" --post-hook \"npm run fix\"",
+    "build": "live-tsc --src src --dest dist --server dist/server.js --post-script gen --post-script fix",
     "gen": "tsc-macro src",
     "fix": "fix-esm-import-path dist/server.js",
     "test": "tsc --noEmit",

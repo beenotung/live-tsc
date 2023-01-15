@@ -65,6 +65,11 @@ Options:
     Add command to run after initial scan and subsequence updates;
     Can be specified multiple times;
 
+  --post-script <npm script>
+    Add npm script to run after initial scan and subsequence updates;
+    Can be specified multiple times;
+    This is a shortcut as: --post-hook "npm run <script>"
+
   --server <file>
     Specify the path of server js file
 
