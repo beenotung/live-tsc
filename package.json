@@ -1,6 +1,6 @@
 {
   "name": "live-tsc",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "A lightweight esbuild-based implementation of tsc that trim off the types (without type checking)",
   "keywords": [
     "typescript",
