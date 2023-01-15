@@ -1,6 +1,9 @@
-import { codes } from './enums'
+import { colors } from './color'
+import { statusCodes } from './status'
 
-console.log('server running:', codes)
+console.log({ statusCodes, colors })
+
+console.log('server running...')
 
 setTimeout(() => {
   // hold the event loop

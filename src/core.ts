@@ -80,7 +80,7 @@ export interface ScanOptions {
 }
 
 export interface Hook {
-  watchFile?: string
+  watchFiles?: string[]
   command: string
 }
 
@@ -218,24 +218,25 @@ type RunHookReason =
 
 async function runHooks(context: Context, reason: RunHookReason) {
   for (let hook of context.postHooks) {
-    if (reason.type == 'init' && hook.watchFile) {
-      const { watchFile } = hook
-      const watcher = watch(
-        watchFile,
-        { persistent: true },
-        wrapFn1(async event => {
-          if (event == 'rename') {
-            watcher.close()
-            context.watchers.delete(watcher)
-            return
-          }
-          if (event != 'change') return
-          await runHook(context, hook, { type: 'update', file: watchFile })
-        }),
-      )
-      context.watchers.add(watcher)
+    if (reason.type == 'init' && hook.watchFiles) {
+      hook.watchFiles.forEach(file => {
+        const watcher = watch(
+          file,
+          { persistent: true },
+          wrapFn1(async event => {
+            if (event == 'rename') {
+              watcher.close()
+              context.watchers.delete(watcher)
+              return
+            }
+            if (event != 'change') return
+            await runHook(context, hook, { type: 'update', file })
+          }),
+        )
+        context.watchers.add(watcher)
+      })
     }
-    if (reason.type == 'update' && hook.watchFile) {
+    if (reason.type == 'update' && hook.watchFiles) {
       continue
     }
     await runHook(context, hook, reason)

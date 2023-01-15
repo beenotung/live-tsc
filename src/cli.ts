@@ -197,12 +197,13 @@ Options:
     Alias: -f
     Default: esm
 
-  --post-hook <command>[#watch:<file>]
+  --post-hook <command>[#watch:<file1[,file2]>]
     Add command to run after initial scan and subsequence updates;
-    If the watch file is specified, it will be re-run only if the specified file is changed;
+    If the watch files are specified, the hook will be re-run only if the specified files are changed,
+    otherwise the hook will observe the source files;
     Can be specified multiple times;
 
-  --post-script <npm script>[#watch:<file>]
+  --post-script <npm script>[#watch:<file1[,file2]>]
     Add npm script to run after initial scan and subsequence updates;
     This is a shortcut as: --post-hook "npm run <script>";
     Details refers to "--post-hook"
@@ -231,5 +232,8 @@ function parseHook(arg: string): Hook {
   if (!match) return { command: arg }
   let watch = match[1]
   let command = arg.slice(0, arg.length - match[0].length)
-  return { watchFile: watch, command }
+  return {
+    watchFiles: watch.split(','),
+    command,
+  }
 }
