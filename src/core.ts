@@ -241,13 +241,13 @@ async function scanDirectory(
 
   await Promise.all(files.map(processFile))
 
-  async function processFile(file: string) {
-    if (skipFilenames.includes(file)) return
+  async function processFile(filename: string) {
+    if (skipFilenames.includes(filename)) return
 
-    const srcPath = path.join(srcDir, file)
+    const srcPath = path.join(srcDir, filename)
     if (context.excludePaths.includes(srcPath)) return
 
-    let destPath = path.join(destDir, file)
+    let destPath = path.join(destDir, filename)
 
     const stat = await fs.stat(srcPath)
 
@@ -269,7 +269,7 @@ async function scanDirectory(
       return
     }
 
-    const extname = path.extname(file)
+    const extname = path.extname(filename)
     if (extname == '.ts') {
       destPath = destPath.replace(/ts$/, 'js')
     } else if (extname == '.tsx') {
