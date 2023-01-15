@@ -344,16 +344,20 @@ async function transpileFile(
   let sourceCode = (await fs.readFile(srcPath)).toString()
   let transpiledCode = await transpile(sourceCode, srcPath, context.config)
 
-  try {
-    const destCode = (await fs.readFile(destPath)).toString()
-    if (destCode.trim() == transpiledCode.trim()) {
-      return
+  async function isSameContent() {
+    try {
+      const destContent = await fs.readFile(destPath)
+      const destCode = destContent.toString()
+      return destCode.trim() == transpiledCode.trim()
+    } catch (error) {
+      // maybe the destPath doesn't exist
+      return false
     }
-  } catch (error) {
-    // maybe the destPath doesn't exist
   }
 
-  await fs.writeFile(destPath, transpiledCode)
+  if (!(await isSameContent())) {
+    await fs.writeFile(destPath, transpiledCode)
+  }
 
   if (context.watch) {
     const onEvent = wrapFn1(async (event: WatchEventType) => {
