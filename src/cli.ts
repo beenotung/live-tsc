@@ -71,7 +71,7 @@ for (let i = 2; i < args.length; i++) {
       open = takeNext()
       break
     case '--format':
-    case '-f':
+    case '-f': {
       const formatStr = takeNext()
 
       if (formatStr !== 'cjs' && formatStr !== 'esm' && formatStr !== 'iife') {
@@ -81,6 +81,7 @@ for (let i = 2; i < args.length; i++) {
 
       format = formatStr
       break
+    }
     case '--help':
     case '-h':
       showHelp()
