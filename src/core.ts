@@ -90,6 +90,18 @@ type Context = Omit<ScanOptions, 'srcPath' | 'destPath'> & {
 }
 type Paths = Pick<ScanOptions, 'srcPath' | 'destPath'>
 
+function infoLog(...messages: any[]) {
+  console.info('[live-tsc]', ...messages)
+}
+
+function debugLog(...messages: any[]) {
+  console.debug('[live-tsc]', ...messages)
+}
+
+function errorLog(...messages: any[]) {
+  console.error('[live-tsc]', ...messages)
+}
+
 export async function scanPath(options: ScanOptions) {
   if (!options.excludePaths.includes(options.destPath)) {
     options.excludePaths.push(options.destPath)
@@ -113,22 +125,22 @@ export async function scanPath(options: ScanOptions) {
 
     const endTime = Date.now()
     const usedTime = endTime - startTime
-    console.info('completed scanning in', usedTime, 'ms')
+    infoLog('completed scanning in', usedTime, 'ms')
 
     await runHooks(context, { type: 'init' })
   }
 
   let setupWatch = () => {
     if (!options.watch) return
-    console.info('watching for changes...')
-    console.info('Tips: you can press Enter to manually re-scan')
+    infoLog('watching for changes...')
+    infoLog('Tips: you can press Enter to manually re-scan')
     process.stdin.on('data', async (buffer: Buffer) => {
       let data = buffer.toString().trim()
       switch (data) {
         case '':
         case 'r':
         case 'reload':
-          console.info('re-scanning...')
+          infoLog('re-scanning...')
           context.watchers.forEach(watcher => watcher.close())
           context.watchers.clear()
           await Promise.all([stopServer(context), scan()])
@@ -148,7 +160,7 @@ export async function scanPath(options: ScanOptions) {
     await stopLastServer()
     await runServer(context)
   } catch (error) {
-    console.error(error)
+    errorLog(error)
     setupWatch()
   }
 }
@@ -181,7 +193,7 @@ function isPidAlive(pid: number) {
 async function stopServer(context: Context) {
   const child = context.serverProcess
   if (!child) return
-  console.info('stopping server for restart...')
+  infoLog('stopping server for restart...')
   delete context.serverProcess
   await new Promise(resolve => {
     child.once('exit', resolve)
@@ -197,7 +209,7 @@ const serverPidFile = 'server.pid'
 async function runServer(context: Context) {
   if (!context.serverFile) return
   await stopServer(context)
-  console.info('starting server...')
+  infoLog('starting server...')
   context.serverProcess = child_process.spawn('node', [context.serverFile], {
     cwd: context.cwd,
     env: process.env,
@@ -251,12 +263,7 @@ async function runHooks(context: Context, reason: RunHookReason) {
   }
 }
 async function runHook(context: Context, hook: Hook, reason: RunHookReason) {
-  console.info(
-    'running postHook',
-    JSON.stringify(hook.command),
-    'reason:',
-    reason,
-  )
+  infoLog('running postHook', JSON.stringify(hook.command), 'reason:', reason)
   await new Promise<void>((resolve, reject) => {
     child_process
       .spawn('bash', ['-c', hook.command], {
@@ -268,7 +275,7 @@ async function runHook(context: Context, hook: Hook, reason: RunHookReason) {
         if (code == 0) {
           return resolve()
         }
-        console.error(
+        errorLog(
           'Failed on postHook:',
           JSON.stringify(hook.command),
           '(exit code: ' + code + ')',
@@ -319,7 +326,7 @@ async function scanDirectory(
     }
 
     if (!stat.isFile()) {
-      console.debug('[skip] ', srcPath, '(not dir nor file)')
+      debugLog('[skip] ', srcPath, '(not dir nor file)')
       return
     }
 
@@ -335,7 +342,7 @@ async function scanDirectory(
       return
     } else {
       if (!skipExtnames.includes(extname)) {
-        console.debug(
+        debugLog(
           '[skip]',
           srcPath,
           `(not supported extname ${JSON.stringify(extname)})`,
@@ -364,7 +371,7 @@ async function scanDirectory(
         const fileIdx = files.indexOf(filename)
         if (fileIdx != -1) {
           // the file is removed
-          console.info('removed file:', file)
+          infoLog('removed file:', file)
           files.splice(fileIdx, 1)
           const childWatcher = childWatchers[filename]
           if (childWatcher) {
@@ -374,7 +381,7 @@ async function scanDirectory(
           }
         } else {
           // the file is newly created
-          console.info('new file:', file)
+          infoLog('new file:', file)
           files.push(filename)
           await processFile(filename)
           await runHooks(context, { type: 'update', file })
@@ -444,7 +451,7 @@ async function transpileFile(
         let endTime = Date.now()
 
         let usedTime = endTime - startTime
-        console.info('updated file:', srcPath, 'in', usedTime, 'ms')
+        infoLog('updated file:', srcPath, 'in', usedTime, 'ms')
 
         await runHooks(context, { type: 'update', file: srcPath })
         await runServer(context)
@@ -479,7 +486,7 @@ function wrapFn1<A>(fn: (a: A) => any): (a: A) => void {
     try {
       await fn(a)
     } catch (error) {
-      console.error(error)
+      errorLog(error)
     }
   }
 }
@@ -489,7 +496,7 @@ function wrapFn2<A, B>(fn: (a: A, b: B) => any): (a: A, b: B) => void {
     try {
       await fn(a, b)
     } catch (error) {
-      console.error(error)
+      errorLog(error)
     }
   }
 }
