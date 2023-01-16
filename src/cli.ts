@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'fs'
-import { Hook, ScanOptions, scanPath } from './core'
+import { Hook, ScanOptions, parseHook, scanPath } from './core'
 import type { Format } from 'esbuild'
 
 const pkg = require('../package.json')
@@ -225,15 +225,4 @@ Options:
     Alias: -h
 `.trim(),
   )
-}
-
-function parseHook(arg: string): Hook {
-  let match = arg.match(/#watch:(.*?)$/)
-  if (!match) return { command: arg }
-  let watch = match[1]
-  let command = arg.slice(0, arg.length - match[0].length)
-  return {
-    watchFiles: watch.split(','),
-    command,
-  }
 }

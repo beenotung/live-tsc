@@ -80,7 +80,7 @@ export interface ScanOptions {
 }
 
 export interface Hook {
-  watchFiles?: string[]
+  watchFiles: string[]
   command: string
 }
 
@@ -218,7 +218,7 @@ type RunHookReason =
 
 async function runHooks(context: Context, reason: RunHookReason) {
   for (let hook of context.postHooks) {
-    if (reason.type == 'init' && hook.watchFiles) {
+    if (reason.type == 'init' && hook.watchFiles.length) {
       hook.watchFiles.forEach(file => {
         const watcher = watch(
           file,
@@ -236,7 +236,7 @@ async function runHooks(context: Context, reason: RunHookReason) {
         context.watchers.add(watcher)
       })
     }
-    if (reason.type == 'update' && hook.watchFiles) {
+    if (reason.type == 'update' && hook.watchFiles.length) {
       continue
     }
     await runHook(context, hook, reason)
@@ -490,4 +490,23 @@ class TranspileError extends Error {
   constructor(public file: string, public errors: any[]) {
     super()
   }
+}
+
+export function parseHook(arg: string): Hook {
+  // https://stackoverflow.com/a/11819111/14681561
+  const match = arg.match(/(?<!\\)(?:\\\\)*#watch:(.*?)$/)
+
+  if (!match) {
+    return {
+      command: arg,
+      watchFiles: []
+    };
+  }
+
+  const command = arg.slice(0, arg.length - match[0].length)
+
+  return {
+    command,
+    watchFiles: match[1].split(',')
+  };
 }
