@@ -80,7 +80,7 @@ export interface ScanOptions {
 }
 
 export interface Hook {
-  watchFiles: string[]
+  watchFiles?: string[]
   command: string
 }
 
@@ -218,7 +218,11 @@ type RunHookReason =
 
 async function runHooks(context: Context, reason: RunHookReason) {
   for (let hook of context.postHooks) {
-    if (reason.type == 'init' && hook.watchFiles.length) {
+    if (
+      reason.type == 'init' &&
+      hook.watchFiles &&
+      hook.watchFiles.length > 0
+    ) {
       hook.watchFiles.forEach(file => {
         const watcher = watch(
           file,
@@ -236,7 +240,11 @@ async function runHooks(context: Context, reason: RunHookReason) {
         context.watchers.add(watcher)
       })
     }
-    if (reason.type == 'update' && hook.watchFiles.length) {
+    if (
+      reason.type == 'update' &&
+      hook.watchFiles &&
+      hook.watchFiles.length > 0
+    ) {
       continue
     }
     await runHook(context, hook, reason)
@@ -496,17 +504,12 @@ export function parseHook(arg: string): Hook {
   // https://stackoverflow.com/a/11819111/14681561
   const match = arg.match(/(?<!\\)(?:\\\\)*#watch:(.*?)$/)
 
-  if (!match) {
-    return {
-      command: arg,
-      watchFiles: []
-    };
-  }
+  if (!match) return { command: arg }
 
   const command = arg.slice(0, arg.length - match[0].length)
 
   return {
     command,
-    watchFiles: match[1].split(',')
-  };
+    watchFiles: match[1].split(','),
+  }
 }
