@@ -87,6 +87,7 @@ export interface Hook {
 type Context = Omit<ScanOptions, 'srcPath' | 'destPath'> & {
   serverProcess?: child_process.ChildProcess
   watchers: Set<FSWatcher>
+  runningHooks: Set<Hook>
 }
 type Paths = Pick<ScanOptions, 'srcPath' | 'destPath'>
 
@@ -110,6 +111,7 @@ export async function scanPath(options: ScanOptions) {
   const context: Context = {
     ...options,
     watchers: new Set(),
+    runningHooks: new Set(),
   }
 
   const stat = await fs.stat(options.srcPath)
@@ -263,6 +265,8 @@ async function runHooks(context: Context, reason: RunHookReason) {
   }
 }
 async function runHook(context: Context, hook: Hook, reason: RunHookReason) {
+  if (context.runningHooks.has(hook)) return
+  context.runningHooks.add(hook)
   infoLog('running postHook', JSON.stringify(hook.command), 'reason:', reason)
   await new Promise<void>((resolve, reject) => {
     child_process
@@ -282,6 +286,8 @@ async function runHook(context: Context, hook: Hook, reason: RunHookReason) {
         )
         reject(new Error('postHook failed'))
       })
+  }).finally(() => {
+    context.runningHooks.delete(hook)
   })
 }
 
