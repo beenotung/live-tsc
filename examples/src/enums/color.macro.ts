@@ -1,4 +1,4 @@
-import { genEnums } from './enums'
+import { genEnums } from './genEnums'
 
 let template = `
 'f00' red

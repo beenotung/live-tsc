@@ -1,5 +1,5 @@
-import { colors } from './color'
-import { statusCodes } from './status'
+import { colors } from './enums/color'
+import { statusCodes } from './enums/status'
 
 console.log({ statusCodes, colors })
 
