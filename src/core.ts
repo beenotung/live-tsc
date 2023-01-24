@@ -233,6 +233,7 @@ type RunHookReason =
 async function runHooks(context: Context, reason: RunHookReason) {
   for (let hook of context.postHooks) {
     if (
+      context.watch &&
       reason.type == 'init' &&
       hook.watchFiles &&
       hook.watchFiles.length > 0
