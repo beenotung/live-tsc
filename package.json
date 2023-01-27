@@ -34,6 +34,7 @@
   "scripts": {
     "prepublishOnly": "npm run build",
     "test": "tsc --noEmit",
+    "dev": "tsc --watch -p .",
     "build": "tsc -p ."
   },
   "dependencies": {
