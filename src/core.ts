@@ -28,10 +28,14 @@ let skipFilenames = [
   '.dccache',
   '.last',
   '.prettierrc',
+  '.swcrc',
   '.prettierignore',
   '.eslintignore',
   '.eslintrc.json',
   'nodemon.json',
+  'server.pid',
+  '.open',
+  'Makefile',
 ]
 
 let skipExtnames = [
@@ -373,7 +377,7 @@ async function scanDirectory(
 
         const file = path.join(srcDir, filename)
 
-        if (context.excludePaths.includes(file)) return
+        if (shouldExcludeFile(context, file)) return
 
         const fileIdx = files.indexOf(filename)
         if (fileIdx != -1) {
@@ -526,4 +530,13 @@ export function parseHook(arg: string): Hook {
     command,
     watchFiles: match[1].split(','),
   }
+}
+
+function shouldExcludeFile(context: Context, file: string) {
+  if (context.excludePaths.includes(file)) return true
+  let filename = path.basename(file)
+  return (
+    skipFilenames.includes(filename) ||
+    skipExtnames.some(ext => filename.endsWith(ext))
+  )
 }
